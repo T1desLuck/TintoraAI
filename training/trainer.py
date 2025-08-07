@@ -1257,4 +1257,372 @@ class ColorizationTrainer:
         
         # Параметры оценки неопределенности
         uncertainty_config = modules_config.get('uncertainty_estimation', {})
-        self.uncertainty_estimation_enabled = uncertainty_config
+        self.uncertainty_estimation_enabled = uncertainty_config.get('enabled', True)
+        self.uncertainty_estimation_method = uncertainty_config.get('method', 'guided')
+        self.uncertainty_estimation_num_samples = uncertainty_config.get('num_samples', 10)
+        self.uncertainty_estimation_dropout_rate = uncertainty_config.get('dropout_rate', 0.1)
+        self.uncertainty_estimation_weight = uncertainty_config.get('weight', 1.0)
+        self.uncertainty_estimation_reg_weight = uncertainty_config.get('reg_weight', 0.1)
+        
+        # Параметры переноса стиля
+        style_transfer_config = modules_config.get('style_transfer', {})
+        self.style_transfer_enabled = style_transfer_config.get('enabled', True)
+        self.style_transfer_content_weight = style_transfer_config.get('content_weight', 1.0)
+        self.style_transfer_style_weight = style_transfer_config.get('style_weight', 100.0)
+        self.style_transfer_content_layers = style_transfer_config.get('content_layers', ['conv4_2'])
+        self.style_transfer_style_layers = style_transfer_config.get(
+            'style_layers', ['conv1_1', 'conv2_1', 'conv3_1', 'conv4_1', 'conv5_1']
+        )
+        
+        # Параметры Few-shot адаптера
+        few_shot_config = modules_config.get('few_shot_adapter', {})
+        self.few_shot_adapter_enabled = few_shot_config.get('enabled', True)
+        self.few_shot_adapter_type = few_shot_config.get('adapter_type', 'standard')
+        self.few_shot_bottleneck_dim = few_shot_config.get('bottleneck_dim', 64)
+        
+        # Параметры динамического балансировщика потерь
+        dynamic_balancer_config = loss_config.get('dynamic_balancer', {})
+        self.loss_balancer_enabled = dynamic_balancer_config.get('enabled', True)
+        self.loss_balancer_update_interval = dynamic_balancer_config.get('interval', 100)
+        self.loss_balancer_strategy = dynamic_balancer_config.get('strategy', 'adaptive')
+        self.loss_balancer_target_metric = dynamic_balancer_config.get('target_metric', 'lpips')
+        self.loss_balancer_lr = dynamic_balancer_config.get('learning_rate', 0.01)
+        
+        # Параметры метрик
+        self.metrics_config = self.config.get('metrics', {})
+        
+    def _is_improvement(self, val_score: float) -> bool:
+        """
+        Проверяет, является ли текущий валидационный скор улучшением.
+        
+        Args:
+            val_score (float): Текущий валидационный скор
+            
+        Returns:
+            bool: True, если текущий скор лучше предыдущего лучшего скора
+        """
+        if self.early_stopping_mode == 'min':
+            return val_score < self.best_val_score
+        else:
+            return val_score > self.best_val_score
+            
+    def _load_checkpoint(self, checkpoint_path: str):
+        """
+        Загружает состояние из чекпоинта.
+        
+        Args:
+            checkpoint_path (str): Путь к чекпоинту
+        """
+        # Загружаем чекпоинт
+        checkpoint = load_checkpoint(checkpoint_path, self.device)
+        
+        # Загружаем состояние модели
+        if not self.distributed:
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+        else:
+            self.model.module.load_state_dict(checkpoint['model_state_dict'])
+            
+        # Загружаем состояние оптимизатора, если есть
+        if 'optimizer_state_dict' in checkpoint:
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            
+        # Загружаем состояние планировщика, если есть
+        if 'scheduler_state_dict' in checkpoint and self.scheduler is not None:
+            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            
+        # Загружаем состояния интеллектуальных модулей, если есть
+        if 'modules_state_dict' in checkpoint:
+            modules_state_dict = checkpoint['modules_state_dict']
+            for module_name, state_dict in modules_state_dict.items():
+                if module_name in self.modules:
+                    self.modules[module_name].load_state_dict(state_dict)
+                    
+        # Загружаем счетчики
+        if 'epoch' in checkpoint:
+            self.current_epoch = checkpoint['epoch'] + 1
+        if 'global_step' in checkpoint:
+            self.global_step = checkpoint['global_step']
+        if 'best_val_score' in checkpoint:
+            self.best_val_score = checkpoint['best_val_score']
+            
+        # Загружаем состояние динамического балансировщика потерь, если есть
+        if 'loss_balancer_state_dict' in checkpoint and self.loss_balancer is not None:
+            self.loss_balancer.load_state_dict(checkpoint['loss_balancer_state_dict'])
+            
+        # Загружаем состояние скейлера смешанной точности, если есть
+        if 'scaler_state_dict' in checkpoint and self.scaler is not None:
+            self.scaler.load_state_dict(checkpoint['scaler_state_dict'])
+
+
+def create_trainer(
+    config_path: str,
+    model: Optional[nn.Module] = None,
+    train_loader: Optional[DataLoader] = None,
+    val_loader: Optional[DataLoader] = None,
+    device: Optional[torch.device] = None,
+    experiment_dir: Optional[str] = None,
+    distributed: bool = False,
+    rank: int = 0,
+    world_size: int = 1
+) -> ColorizationTrainer:
+    """
+    Создает тренер на основе конфигурации.
+    
+    Args:
+        config_path (str): Путь к файлу конфигурации
+        model (nn.Module, optional): Модель колоризации
+        train_loader (DataLoader, optional): Загрузчик тренировочных данных
+        val_loader (DataLoader, optional): Загрузчик данных для валидации
+        device (torch.device, optional): Устройство для вычислений
+        experiment_dir (str, optional): Директория для сохранения результатов
+        distributed (bool): Включить распределенное обучение
+        rank (int): Ранг текущего процесса (для распределенного обучения)
+        world_size (int): Общее количество процессов (для распределенного обучения)
+        
+    Returns:
+        ColorizationTrainer: Созданный тренер
+    """
+    # Загружаем конфигурацию
+    config = load_config(config_path)
+    
+    # Определяем устройство
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+    # Создаем модель, если не предоставлена
+    if model is None:
+        model = create_model_from_config(config, device)
+        
+    # Создаем загрузчики данных, если не предоставлены
+    if train_loader is None or val_loader is None:
+        train_loader, val_loader = create_data_loaders_from_config(config, distributed, rank, world_size)
+        
+    # Создаем тренер
+    trainer = ColorizationTrainer(
+        model=model,
+        config=config,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        device=device,
+        experiment_dir=experiment_dir,
+        distributed=distributed,
+        rank=rank,
+        world_size=world_size
+    )
+    
+    return trainer
+
+
+def create_model_from_config(config: Dict, device: torch.device) -> nn.Module:
+    """
+    Создает модель на основе конфигурации.
+    
+    Args:
+        config (Dict): Конфигурация
+        device (torch.device): Устройство для вычислений
+        
+    Returns:
+        nn.Module: Созданная модель
+    """
+    # Получаем конфигурацию модели
+    model_config = config.get('model', {})
+    
+    # Создаем компоненты модели
+    swin_unet_config = model_config.get('swin_unet', {})
+    vit_semantic_config = model_config.get('vit_semantic', {})
+    fpn_pyramid_config = model_config.get('fpn_pyramid', {})
+    cross_attention_config = model_config.get('cross_attention', {})
+    feature_fusion_config = model_config.get('feature_fusion', {})
+    
+    # Создаем основной Swin-UNet
+    swin_unet = SwinUNet(
+        img_size=swin_unet_config.get('img_size', 256),
+        patch_size=swin_unet_config.get('patch_size', 4),
+        in_channels=swin_unet_config.get('in_channels', 1),
+        out_channels=swin_unet_config.get('out_channels', 2),
+        embed_dim=swin_unet_config.get('embed_dim', 96),
+        depths=swin_unet_config.get('depths', [2, 2, 6, 2]),
+        num_heads=swin_unet_config.get('num_heads', [3, 6, 12, 24]),
+        window_size=swin_unet_config.get('window_size', 8),
+        mlp_ratio=swin_unet_config.get('mlp_ratio', 4.0),
+        dropout_rate=swin_unet_config.get('dropout_rate', 0.0),
+        attention_dropout_rate=swin_unet_config.get('attention_dropout_rate', 0.0),
+        return_intermediate=True
+    )
+    
+    # Создаем ViT для семантического понимания
+    vit_semantic = ViTSemantic(
+        img_size=vit_semantic_config.get('img_size', 256),
+        patch_size=vit_semantic_config.get('patch_size', 16),
+        in_channels=vit_semantic_config.get('in_channels', 1),
+        embed_dim=vit_semantic_config.get('embed_dim', 768),
+        depth=vit_semantic_config.get('depth', 12),
+        num_heads=vit_semantic_config.get('num_heads', 12),
+        mlp_ratio=vit_semantic_config.get('mlp_ratio', 4.0),
+        dropout_rate=vit_semantic_config.get('dropout_rate', 0.0)
+    )
+    
+    # Создаем FPN с пирамидальным пулингом
+    fpn = FPNPyramid(
+        in_channels_list=fpn_pyramid_config.get('in_channels_list', [96, 192, 384, 768]),
+        out_channels=fpn_pyramid_config.get('out_channels', 256),
+        use_pyramid_pooling=fpn_pyramid_config.get('use_pyramid_pooling', True)
+    )
+    
+    # Создаем мост Cross-Attention
+    cross_attention = CrossAttentionBridge(
+        swin_dim=cross_attention_config.get('swin_dim', 256),
+        vit_dim=cross_attention_config.get('vit_dim', 768),
+        num_heads=cross_attention_config.get('num_heads', 8),
+        dropout_rate=cross_attention_config.get('dropout_rate', 0.0)
+    )
+    
+    # Создаем модуль слияния признаков
+    feature_fusion = MultiHeadFeatureFusion(
+        in_channels_list=feature_fusion_config.get('in_channels_list', [256, 768]),
+        out_channels=feature_fusion_config.get('out_channels', 512),
+        num_heads=feature_fusion_config.get('num_heads', 8)
+    )
+    
+    # Объединяем все компоненты в полную модель
+    class FullModel(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.swin_unet = swin_unet
+            self.vit_semantic = vit_semantic
+            self.fpn = fpn
+            self.cross_attention = cross_attention
+            self.feature_fusion = feature_fusion
+            
+            # Финальный слой
+            self.final = nn.Conv2d(feature_fusion_config.get('out_channels', 512), 
+                                   swin_unet_config.get('out_channels', 2), kernel_size=1)
+            
+        def forward(self, x):
+            # Swin-UNet обработка
+            swin_features = self.swin_unet(x)
+            
+            # ViT обработка
+            vit_features = self.vit_semantic(x)
+            
+            # FPN обработка
+            fpn_features = self.fpn(swin_features)
+            
+            # Cross-Attention между FPN и ViT
+            attended_features = self.cross_attention(fpn_features, vit_features)
+            
+            # Слияние признаков
+            fused_features = self.feature_fusion([attended_features, vit_features])
+            
+            # Финальное предсказание
+            output = self.final(fused_features)
+            
+            # Возвращаем результат
+            if swin_unet_config.get('out_channels', 2) == 2:
+                # Возвращаем a и b каналы для пространства LAB
+                return {'a': output[:, 0:1], 'b': output[:, 1:2]}
+            else:
+                # Возвращаем полное изображение
+                return {'colorized': output}
+    
+    # Создаем модель
+    model = FullModel()
+    model.to(device)
+    
+    return model
+
+
+def create_data_loaders_from_config(
+    config: Dict,
+    distributed: bool = False,
+    rank: int = 0,
+    world_size: int = 1
+) -> Tuple[DataLoader, Optional[DataLoader]]:
+    """
+    Создает загрузчики данных на основе конфигурации.
+    
+    Args:
+        config (Dict): Конфигурация
+        distributed (bool): Включить распределенное обучение
+        rank (int): Ранг текущего процесса (для распределенного обучения)
+        world_size (int): Общее количество процессов (для распределенного обучения)
+        
+    Returns:
+        Tuple[DataLoader, Optional[DataLoader]]: Загрузчики для обучения и валидации
+    """
+    # Получаем конфигурацию данных и обучения
+    data_config = config.get('data', {})
+    training_config = config.get('training', {})
+    
+    # Параметры загрузчиков данных
+    batch_size = training_config.get('batch_size', 16)
+    num_workers = training_config.get('num_workers', 4)
+    
+    # Создаем датасеты
+    from utils.data_loader import create_datamodule
+    
+    datamodule = create_datamodule(
+        data_config=data_config,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        distributed=distributed,
+        rank=rank,
+        world_size=world_size
+    )
+    
+    # Получаем загрузчики данных
+    train_loader = datamodule.train_dataloader()
+    val_loader = datamodule.val_dataloader() if hasattr(datamodule, 'val_dataloader') else None
+    
+    return train_loader, val_loader
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="TintoraAI Trainer")
+    parser.add_argument("--config", type=str, required=True, help="Путь к конфигурации")
+    parser.add_argument("--experiment", type=str, help="Директория для сохранения результатов")
+    parser.add_argument("--resume", type=str, help="Путь к чекпоинту для восстановления обучения")
+    parser.add_argument("--device", type=str, help="Устройство для вычислений (cuda, cpu)")
+    parser.add_argument("--distributed", action="store_true", help="Включить распределенное обучение")
+    parser.add_argument("--world-size", type=int, default=1, help="Общее количество процессов")
+    parser.add_argument("--rank", type=int, default=0, help="Ранг текущего процесса")
+    parser.add_argument("--seed", type=int, help="Зерно для генератора случайных чисел")
+    
+    args = parser.parse_args()
+    
+    try:
+        # Устанавливаем зерно для воспроизводимости
+        if args.seed is not None:
+            torch.manual_seed(args.seed)
+            np.random.seed(args.seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            
+        # Определяем устройство
+        device = torch.device(args.device) if args.device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        # Создаем тренер
+        trainer = create_trainer(
+            config_path=args.config,
+            experiment_dir=args.experiment,
+            device=device,
+            distributed=args.distributed,
+            rank=args.rank,
+            world_size=args.world_size
+        )
+        
+        # Обучаем модель
+        results = trainer.train(resume_from=args.resume)
+        
+        # Выводим результаты
+        print(f"Обучение завершено. Лучший валидационный скор: {results['best_val_score']}")
+        print(f"Лучшая модель сохранена в: {results['best_model_path']}")
+        print(f"Финальная модель сохранена в: {results['final_model_path']}")
+        
+    except KeyboardInterrupt:
+        print("\nОбучение прервано пользователем")
+    except Exception as e:
+        print(f"Ошибка при обучении: {str(e)}")
+        traceback.print_exc()
