@@ -1403,4 +1403,483 @@ class QueueProcessor:
         """Проверяет существующие файлы в директории и добавляет их в очередь."""
         # Находим все файлы изображений в директории
         for ext in self.extensions:
-            for file_path in Path(self.input_dir).glob
+            for file_path in Path(self.input_dir).glob(f"*{ext}"):
+                # Игнорируем поддиректории
+                if not file_path.is_dir() and file_path.parent == Path(self.input_dir):
+                    # Добавляем файл в очередь
+                    self.add_to_queue(str(file_path))
+                    
+            # Проверяем также файлы с расширениями в верхнем регистре
+            for file_path in Path(self.input_dir).glob(f"*{ext.upper()}"):
+                if not file_path.is_dir() and file_path.parent == Path(self.input_dir):
+                    self.add_to_queue(str(file_path))
+        
+    def _process_queue_loop(self):
+        """Основной цикл обработки очереди."""
+        while self.running:
+            # Проверяем, есть ли файлы в очереди
+            if not self.file_queue.empty():
+                # Извлекаем файл из очереди
+                file_path = self.file_queue.get()
+                
+                # Проверяем, что файл существует
+                if os.path.isfile(file_path):
+                    self.logger.info(f"Обработка файла из очереди: {file_path}")
+                    
+                    # Устанавливаем флаг обработки
+                    self.processing = True
+                    
+                    try:
+                        # Загружаем изображение
+                        image = Image.open(file_path).convert('RGB')
+                        
+                        # Находим соответствующее референсное изображение, если указана директория
+                        reference_image = None
+                        if self.reference_dir:
+                            filename = os.path.basename(file_path)
+                            reference_path = os.path.join(self.reference_dir, filename)
+                            
+                            # Если не найдено, пробуем с другими расширениями
+                            if not os.path.exists(reference_path):
+                                base_name = os.path.splitext(filename)[0]
+                                for ext in self.extensions:
+                                    test_path = os.path.join(self.reference_dir, f"{base_name}{ext}")
+                                    if os.path.exists(test_path):
+                                        reference_path = test_path
+                                        break
+                                        
+                            # Загружаем референсное изображение, если найдено
+                            if os.path.exists(reference_path):
+                                try:
+                                    reference_image = Image.open(reference_path).convert('RGB')
+                                except Exception as e:
+                                    self.logger.warning(f"Не удалось загрузить референсное изображение {reference_path}: {e}")
+                                    
+                        # Создаем имя файла для результата
+                        base_name = os.path.splitext(os.path.basename(file_path))[0]
+                        output_path = os.path.join(self.output_dir, "colorized", f"{base_name}_colorized.png")
+                        
+                        # Выполняем колоризацию
+                        result = self.batch_processor._process_single_image(
+                            image=image,
+                            reference_image=reference_image,
+                            style_name=self.style_name,
+                            style_alpha=self.style_alpha,
+                            output_path=output_path,
+                            metadata={"source_path": file_path}
+                        )
+                        
+                        # Перемещаем исходный файл в директорию обработанных, если обработка успешна
+                        if result.get('status') == 'success':
+                            # Создаем путь для перемещения файла
+                            processed_path = os.path.join(self.processed_dir, os.path.basename(file_path))
+                            
+                            # Если файл уже существует, добавляем временную метку
+                            if os.path.exists(processed_path):
+                                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                                base_name, ext = os.path.splitext(os.path.basename(file_path))
+                                processed_path = os.path.join(self.processed_dir, f"{base_name}_{timestamp}{ext}")
+                                
+                            # Перемещаем файл
+                            shutil.move(file_path, processed_path)
+                            self.logger.info(f"Файл перемещен в {processed_path}")
+                        else:
+                            # Перемещаем файл в директорию ошибок
+                            error_path = os.path.join(self.error_dir, os.path.basename(file_path))
+                            
+                            # Если файл уже существует, добавляем временную метку
+                            if os.path.exists(error_path):
+                                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                                base_name, ext = os.path.splitext(os.path.basename(file_path))
+                                error_path = os.path.join(self.error_dir, f"{base_name}_{timestamp}{ext}")
+                                
+                            # Перемещаем файл
+                            shutil.move(file_path, error_path)
+                            self.logger.error(f"Ошибка обработки файла. Файл перемещен в {error_path}")
+                        
+                    except Exception as e:
+                        self.logger.error(f"Ошибка при обработке файла {file_path}: {str(e)}")
+                        self.logger.error(traceback.format_exc())
+                        
+                        # Перемещаем файл в директорию ошибок
+                        try:
+                            error_path = os.path.join(self.error_dir, os.path.basename(file_path))
+                            
+                            # Если файл уже существует, добавляем временную метку
+                            if os.path.exists(error_path):
+                                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                                base_name, ext = os.path.splitext(os.path.basename(file_path))
+                                error_path = os.path.join(self.error_dir, f"{base_name}_{timestamp}{ext}")
+                                
+                            # Перемещаем файл
+                            shutil.move(file_path, error_path)
+                            self.logger.error(f"Файл перемещен в {error_path}")
+                        except Exception as move_error:
+                            self.logger.error(f"Не удалось переместить файл: {str(move_error)}")
+                    
+                    # Снимаем флаг обработки
+                    self.processing = False
+                else:
+                    self.logger.warning(f"Файл не найден: {file_path}")
+            
+            # Ожидаем перед следующей проверкой
+            time.sleep(self.poll_interval)
+            
+    def get_queue_size(self) -> int:
+        """
+        Возвращает размер очереди.
+        
+        Returns:
+            int: Количество файлов в очереди
+        """
+        return self.file_queue.qsize()
+    
+    def get_status(self) -> Dict:
+        """
+        Возвращает текущий статус обработки очереди.
+        
+        Returns:
+            Dict: Статус обработки
+        """
+        return {
+            "running": self.running,
+            "processing": self.processing,
+            "queue_size": self.get_queue_size()
+        }
+
+
+def process_image_in_process(task: Dict) -> Dict:
+    """
+    Функция для обработки изображения в отдельном процессе.
+    
+    Args:
+        task (Dict): Задача для обработки
+        
+    Returns:
+        Dict: Результат обработки
+    """
+    # Извлекаем параметры задачи
+    image_path = task['image_path']
+    reference_path = task['reference_path']
+    style_name = task['style_name']
+    style_alpha = task['style_alpha']
+    output_path = task['output_path']
+    metadata = task['metadata']
+    config = task['config']
+    
+    # Определяем время начала обработки
+    start_time = time.time()
+    
+    try:
+        # Загружаем предиктор
+        predictor = load_predictor(
+            model_path=config['model_path'],
+            config_path=config['config_path'],
+            modules_path=config['modules_path'],
+            device=config['device']
+        )
+        
+        # Загружаем постпроцессор, если нужно
+        postprocessor = None
+        if config['postprocess']:
+            from .postprocessor import create_postprocessor
+            postprocessor = create_postprocessor(config_path=config['config_path'], device=config['device'])
+        
+        # Загружаем изображение
+        image = Image.open(image_path).convert('RGB')
+        
+        # Загружаем референсное изображение, если есть
+        reference_image = None
+        if reference_path is not None:
+            try:
+                reference_image = Image.open(reference_path).convert('RGB')
+            except Exception as e:
+                logging.warning(f"Не удалось загрузить референсное изображение {reference_path}: {e}")
+                
+        # Выполняем колоризацию
+        result = predictor.colorize(
+            image=image,
+            reference_image=reference_image,
+            style_name=style_name,
+            style_alpha=style_alpha,
+            output_path=output_path,
+            save_comparison=config['save_comparison'],
+            save_uncertainty=config['save_uncertainty'],
+            metadata=metadata
+        )
+        
+        # Если колоризация успешна и включена постобработка, применяем её
+        if result.get('status') == 'success' and config['postprocess'] and postprocessor is not None:
+            try:
+                # Загружаем колоризованное изображение
+                colorized_path = result.get('output_path')
+                colorized_image = Image.open(colorized_path).convert('RGB')
+                
+                # Применяем постобработку
+                postprocess_result = postprocessor.process_image(
+                    image=colorized_image,
+                    grayscale_image=image,
+                    output_path=colorized_path,  # Перезаписываем колоризованное изображение
+                    save_comparison=config['save_comparison'],
+                    metadata=metadata
+                )
+                
+                # Обновляем результат
+                result['postprocessed'] = True
+                result['postprocess_info'] = postprocess_result.get('applied_operations', {})
+                
+                # Если было создано сравнение, добавляем его в результат
+                if 'comparison_path' in postprocess_result and postprocess_result['comparison_path']:
+                    result['postprocess_comparison_path'] = postprocess_result['comparison_path']
+                    
+            except Exception as e:
+                logging.warning(f"Ошибка при постобработке: {str(e)}")
+                result['postprocessed'] = False
+                result['postprocess_error'] = str(e)
+        
+        # Добавляем время обработки
+        result['processing_time'] = time.time() - start_time
+        
+        return result
+        
+    except Exception as e:
+        # Логируем ошибку
+        logging.error(f"Ошибка при обработке изображения {image_path}: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        # Возвращаем результат с ошибкой
+        return {
+            "status": "error",
+            "error_message": str(e),
+            "source_path": image_path,
+            "processing_time": time.time() - start_time
+        }
+
+
+def create_batch_processor(
+    predictor_path: str,
+    config_path: Optional[str] = None,
+    modules_path: Optional[str] = None,
+    postprocessor_enabled: bool = True,
+    batch_size: int = 4,
+    mode: ProcessingMode = ProcessingMode.BATCH_SEQUENTIAL,
+    max_workers: int = 4,
+    output_dir: str = "./output",
+    device: Optional[str] = None
+) -> BatchProcessor:
+    """
+    Создает процессор пакетной обработки.
+    
+    Args:
+        predictor_path (str): Путь к сохраненной модели предиктора
+        config_path (str, optional): Путь к конфигурации
+        modules_path (str, optional): Путь к сохраненным интеллектуальным модулям
+        postprocessor_enabled (bool): Включить постобработку
+        batch_size (int): Размер батча для обработки
+        mode (ProcessingMode): Режим обработки
+        max_workers (int): Максимальное количество рабочих потоков/процессов
+        output_dir (str): Директория для результатов
+        device (str, optional): Устройство для вычислений
+        
+    Returns:
+        BatchProcessor: Созданный процессор пакетной обработки
+    """
+    # Загружаем предиктор
+    from .predictor import load_predictor
+    predictor = load_predictor(
+        model_path=predictor_path,
+        config_path=config_path,
+        modules_path=modules_path,
+        device=device
+    )
+    
+    # Загружаем конфигурацию
+    config = {}
+    if config_path is not None:
+        try:
+            from utils.config_parser import load_config
+            config = load_config(config_path)
+        except Exception as e:
+            logging.warning(f"Не удалось загрузить конфигурацию: {str(e)}")
+            
+    # Загружаем постпроцессор, если нужно
+    postprocessor = None
+    if postprocessor_enabled:
+        from .postprocessor import create_postprocessor
+        postprocessor = create_postprocessor(config_path=config_path, device=device)
+        
+    # Обновляем конфигурацию
+    config.update({
+        'output_dir': output_dir,
+        'model_path': predictor_path,
+        'config_path': config_path,
+        'modules_path': modules_path,
+        'device': device,
+        'postprocess': postprocessor_enabled,
+        'batch_size': batch_size
+    })
+    
+    # Создаем процессор пакетной обработки
+    return BatchProcessor(
+        predictor=predictor,
+        postprocessor=postprocessor,
+        batch_size=batch_size,
+        mode=mode,
+        max_workers=max_workers,
+        config=config
+    )
+
+
+def process_batch_from_config(config_path: str) -> Dict:
+    """
+    Выполняет пакетную обработку на основе конфигурационного файла.
+    
+    Args:
+        config_path (str): Путь к конфигурационному файлу
+        
+    Returns:
+        Dict: Результаты обработки
+    """
+    # Загружаем конфигурацию
+    from utils.config_parser import load_config
+    config = load_config(config_path)
+    
+    # Извлекаем параметры
+    predictor_path = config.get('model_path')
+    if not predictor_path:
+        raise ValueError("В конфигурации не указан путь к модели (model_path)")
+        
+    input_dir = config.get('input_dir')
+    if not input_dir:
+        raise ValueError("В конфигурации не указана входная директория (input_dir)")
+        
+    output_dir = config.get('output_dir', './output')
+    modules_path = config.get('modules_path')
+    batch_size = config.get('batch_size', 4)
+    max_workers = config.get('max_workers', 4)
+    mode_str = config.get('mode', 'batch_sequential')
+    device = config.get('device')
+    postprocessor_enabled = config.get('postprocess', True)
+    recursive = config.get('recursive', False)
+    extensions = config.get('extensions')
+    reference_dir = config.get('reference_dir')
+    style_name = config.get('style_name')
+    style_alpha = config.get('style_alpha')
+    
+    # Преобразуем строковый режим в перечисление
+    try:
+        mode = ProcessingMode(mode_str)
+    except ValueError:
+        logging.warning(f"Неизвестный режим обработки: {mode_str}, используется BATCH_SEQUENTIAL")
+        mode = ProcessingMode.BATCH_SEQUENTIAL
+        
+    # Создаем процессор пакетной обработки
+    batch_processor = create_batch_processor(
+        predictor_path=predictor_path,
+        config_path=config_path,
+        modules_path=modules_path,
+        postprocessor_enabled=postprocessor_enabled,
+        batch_size=batch_size,
+        mode=mode,
+        max_workers=max_workers,
+        output_dir=output_dir,
+        device=device
+    )
+    
+    # Выполняем обработку директории
+    return batch_processor.process_directory(
+        input_dir=input_dir,
+        recursive=recursive,
+        extensions=extensions,
+        reference_dir=reference_dir,
+        style_name=style_name,
+        style_alpha=style_alpha,
+        metadata={'config_path': config_path}
+    )
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="TintoraAI Batch Processor")
+    parser.add_argument("--model", type=str, required=True, help="Путь к модели")
+    parser.add_argument("--config", type=str, help="Путь к конфигурации")
+    parser.add_argument("--modules", type=str, help="Путь к интеллектуальным модулям")
+    parser.add_argument("--input", type=str, required=True, help="Путь к директории с изображениями")
+    parser.add_argument("--output", type=str, help="Путь для сохранения результатов")
+    parser.add_argument("--recursive", action="store_true", help="Рекурсивный поиск изображений")
+    parser.add_argument("--reference", type=str, help="Путь к директории с референсными изображениями")
+    parser.add_argument("--style", type=str, help="Имя стиля для применения")
+    parser.add_argument("--alpha", type=float, help="Интенсивность стиля (0.0-1.0)")
+    parser.add_argument("--batch-size", type=int, default=4, help="Размер батча")
+    parser.add_argument("--workers", type=int, default=4, help="Количество рабочих потоков/процессов")
+    parser.add_argument("--mode", type=str, choices=[m.value for m in ProcessingMode], 
+                      default="batch_sequential", help="Режим обработки")
+    parser.add_argument("--no-postprocess", action="store_true", help="Отключить постобработку")
+    parser.add_argument("--device", type=str, help="Устройство (cuda, cpu)")
+    parser.add_argument("--queue", action="store_true", help="Режим очереди")
+    parser.add_argument("--poll-interval", type=float, default=2.0, help="Интервал проверки очереди (сек)")
+    
+    args = parser.parse_args()
+    
+    try:
+        # Определяем режим обработки
+        mode = ProcessingMode(args.mode)
+        
+        # Создаем процессор пакетной обработки
+        batch_processor = create_batch_processor(
+            predictor_path=args.model,
+            config_path=args.config,
+            modules_path=args.modules,
+            postprocessor_enabled=not args.no_postprocess,
+            batch_size=args.batch_size,
+            mode=mode,
+            max_workers=args.workers,
+            output_dir=args.output or "./output",
+            device=args.device
+        )
+        
+        # Выполняем обработку в режиме очереди или пакетно
+        if args.queue:
+            # Создаем процессор очереди
+            queue_processor = QueueProcessor(
+                batch_processor=batch_processor,
+                input_dir=args.input,
+                output_dir=args.output or "./output",
+                poll_interval=args.poll_interval,
+                auto_start=True,
+                reference_dir=args.reference,
+                style_name=args.style,
+                style_alpha=args.alpha
+            )
+            
+            try:
+                # Выводим сообщение и ожидаем завершение (Ctrl+C)
+                print(f"Запущена обработка очереди в директории {args.input}")
+                print("Нажмите Ctrl+C для остановки")
+                
+                # Ожидаем остановки
+                while True:
+                    time.sleep(1)
+                    
+            except KeyboardInterrupt:
+                print("\nОстановка обработки очереди...")
+                queue_processor.stop()
+                print("Обработка очереди остановлена")
+                
+        else:
+            # Выполняем пакетную обработку
+            result = batch_processor.process_directory(
+                input_dir=args.input,
+                recursive=args.recursive,
+                reference_dir=args.reference,
+                style_name=args.style,
+                style_alpha=args.alpha
+            )
+            
+            print(f"\nОбработка завершена: {result['successful_images']} успешно, {result['failed_images']} с ошибками, {result['skipped_images']} пропущено")
+            print(f"Общее время: {result['total_time']:.2f} сек, скорость: {result['images_per_second']:.2f} изобр./сек")
+            
+    except Exception as e:
+        print(f"Ошибка: {str(e)}")
+        traceback.print_exc()
