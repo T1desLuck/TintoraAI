@@ -149,10 +149,10 @@ style:
 Если вы используете TintoraAI в своих исследованиях, пожалуйста, процитируйте наш проект:
 
 ```bibtex
-@software{tintorai2023,
-  author = {TintoraAI Team},
+@software{TintorAI,
+  author = {T1desLuck},
   title = {TintoraAI: Продвинутая система колоризации изображений},
-  year = {2023},
+  year = {2025},
   url = {https://github.com/T1desLuck/TintoraAI}
 }
 ```
