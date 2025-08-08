@@ -27,6 +27,7 @@ import traceback
 from typing import Dict, List, Tuple, Union, Optional, Any
 from enum import Enum
 from pathlib import Path
+from PIL import ImageDraw
 
 import numpy as np
 import torch
