@@ -23,6 +23,232 @@ import torch.nn.functional as F
 import numpy as np
 
 
+class PatchNCELoss(nn.Module):
+    """
+    Базовая PatchNCE функция потерь для контрастного + градиентного обучения.
+    
+    Реализует простое PatchNCE контрастное обучение с градиентной составляющей
+    для сохранения локальных цветовых паттернов и непрерывности переходов.
+    
+    Args:
+        temperature (float): Параметр температуры для контрастного обучения
+        patch_size (int): Размер патчей для выборки
+        n_patches (int): Количество патчей для выборки из каждого изображения
+        device (torch.device): Устройство для вычислений
+    """
+    def __init__(self, temperature=0.07, patch_size=16, n_patches=256, device=None):
+        super().__init__()
+        self.temperature = temperature
+        self.patch_size = patch_size
+        self.n_patches = n_patches
+        self.device = device if device is not None else torch.device('cpu')
+        
+        # Создаем сэмплер патчей
+        self.patch_sampler = PatchSampler(
+            patch_size=patch_size,
+            patch_count=n_patches,
+            use_perceptual_sampling=True
+        )
+        
+        # Проектор для преобразования патчей в контрастное пространство
+        # Адаптивно определяем размерность входных признаков
+        self.projector = None  # Будет инициализирован при первом вызове
+        self.projection_dim = 128  # Размерность проекционного пространства
+        
+        # Критерий потерь
+        self.cross_entropy = nn.CrossEntropyLoss()
+        
+    def _init_projector(self, feature_dim):
+        """
+        Инициализирует проектор на основе размерности входных признаков.
+        
+        Args:
+            feature_dim (int): Размерность входных признаков
+        """
+        if self.projector is None:
+            self.projector = nn.Sequential(
+                nn.Linear(feature_dim, self.projection_dim),
+                nn.ReLU(),
+                nn.Linear(self.projection_dim, self.projection_dim)
+            ).to(self.device)
+    
+    def extract_patches(self, img):
+        """
+        Извлекает патчи из изображения.
+        
+        Args:
+            img (torch.Tensor): Входное изображение [B, C, H, W]
+            
+        Returns:
+            torch.Tensor: Извлеченные патчи [B, n_patches, patch_size*patch_size*C]
+        """
+        batch_size, channels, height, width = img.shape
+        
+        # Используем сэмплер для извлечения патчей
+        patches = self.patch_sampler(img)  # [B, n_patches, C, patch_size, patch_size]
+        
+        # Преобразуем в плоский формат
+        patches_flat = patches.reshape(
+            batch_size, 
+            self.n_patches, 
+            channels * self.patch_size * self.patch_size
+        )
+        
+        return patches_flat
+    
+    def _compute_contrastive_loss(self, anchor_features, positive_features, negative_features):
+        """
+        Вычисляет контрастную потерю между якорными, положительными и отрицательными признаками.
+        
+        Args:
+            anchor_features (torch.Tensor): Якорные признаки [B, N, D]
+            positive_features (torch.Tensor): Положительные признаки [B, N, D]
+            negative_features (torch.Tensor): Отрицательные признаки [B, N_neg, D]
+            
+        Returns:
+            torch.Tensor: Контрастная потеря
+        """
+        batch_size, n_patches, feature_dim = anchor_features.shape
+        total_loss = 0.0
+        
+        for b in range(batch_size):
+            anchor = anchor_features[b]  # [N, D]
+            positive = positive_features[b]  # [N, D]
+            
+            # Нормализуем признаки
+            anchor = F.normalize(anchor, dim=1)
+            positive = F.normalize(positive, dim=1)
+            
+            # Вычисляем сходство между якорными и положительными патчами
+            pos_similarity = torch.sum(anchor * positive, dim=1) / self.temperature  # [N]
+            
+            # Вычисляем сходство с отрицательными примерами
+            if negative_features is not None:
+                negative = F.normalize(negative_features[b], dim=1)  # [N_neg, D]
+                neg_similarity = torch.matmul(anchor, negative.transpose(0, 1)) / self.temperature  # [N, N_neg]
+                
+                # Объединяем положительные и отрицательные сходства
+                logits = torch.cat([pos_similarity.unsqueeze(1), neg_similarity], dim=1)  # [N, 1+N_neg]
+                labels = torch.zeros(n_patches, dtype=torch.long, device=self.device)  # Положительные на позиции 0
+            else:
+                # Если нет отрицательных примеров, используем только положительные
+                logits = pos_similarity.unsqueeze(1)  # [N, 1]
+                labels = torch.zeros(n_patches, dtype=torch.long, device=self.device)
+            
+            # Вычисляем cross-entropy потерю
+            loss = self.cross_entropy(logits, labels)
+            total_loss += loss
+        
+        return total_loss / batch_size
+    
+    def _compute_gradient_loss(self, query, reference):
+        """
+        Вычисляет градиентную потерю для сохранения непрерывности цветовых переходов.
+        
+        Args:
+            query (torch.Tensor): Запросное изображение [B, C, H, W]
+            reference (torch.Tensor): Эталонное изображение [B, C, H, W]
+            
+        Returns:
+            torch.Tensor: Градиентная потеря
+        """
+        def compute_gradients(x):
+            # Горизонтальные градиенты
+            h_grad = x[:, :, :, 1:] - x[:, :, :, :-1]
+            # Вертикальные градиенты
+            v_grad = x[:, :, 1:, :] - x[:, :, :-1, :]
+            return h_grad, v_grad
+        
+        # Вычисляем градиенты для запросного и эталонного изображений
+        query_h_grad, query_v_grad = compute_gradients(query)
+        ref_h_grad, ref_v_grad = compute_gradients(reference)
+        
+        # Вычисляем L1 потерю между градиентами
+        h_loss = F.l1_loss(query_h_grad, ref_h_grad)
+        v_loss = F.l1_loss(query_v_grad, ref_v_grad)
+        
+        return h_loss + v_loss
+    
+    def forward(self, query, key, reference):
+        """
+        Прямое распространение для вычисления PatchNCE потери.
+        
+        Args:
+            query (torch.Tensor): Запросное изображение (обычно L-канал) [B, C_q, H, W]
+            key (torch.Tensor): Ключевое изображение (обычно предсказанные ab-каналы) [B, C_k, H, W] 
+            reference (torch.Tensor): Эталонное изображение (целевые ab-каналы) [B, C_r, H, W]
+            
+        Returns:
+            torch.Tensor: Скалярная потеря
+        """
+        # Перемещаем на нужное устройство
+        query = query.to(self.device)
+        key = key.to(self.device)
+        reference = reference.to(self.device)
+        
+        # Извлекаем патчи из всех изображений
+        query_patches = self.extract_patches(query)  # [B, N, D_q]
+        key_patches = self.extract_patches(key)      # [B, N, D_k]
+        ref_patches = self.extract_patches(reference) # [B, N, D_r]
+        
+        # Определяем размерности признаков и инициализируем проекторы при необходимости
+        query_feature_dim = query_patches.shape[-1]
+        key_feature_dim = key_patches.shape[-1]
+        ref_feature_dim = ref_patches.shape[-1]
+        
+        # Для простоты используем проектор с максимальной размерностью
+        max_feature_dim = max(query_feature_dim, key_feature_dim, ref_feature_dim)
+        self._init_projector(max_feature_dim)
+        
+        # Приводим все патчи к одинаковой размерности через padding или обрезку
+        def pad_or_crop_to_size(patches, target_dim):
+            current_dim = patches.shape[-1]
+            if current_dim < target_dim:
+                # Дополняем нулями
+                padding = torch.zeros(
+                    patches.shape[0], patches.shape[1], target_dim - current_dim,
+                    device=patches.device, dtype=patches.dtype
+                )
+                return torch.cat([patches, padding], dim=-1)
+            elif current_dim > target_dim:
+                # Обрезаем
+                return patches[:, :, :target_dim]
+            else:
+                return patches
+        
+        query_patches = pad_or_crop_to_size(query_patches, max_feature_dim)
+        key_patches = pad_or_crop_to_size(key_patches, max_feature_dim)
+        ref_patches = pad_or_crop_to_size(ref_patches, max_feature_dim)
+        
+        # Проецируем патчи в контрастное пространство
+        batch_size, n_patches = query_patches.shape[:2]
+        
+        query_projected = self.projector(query_patches.reshape(-1, max_feature_dim))
+        query_projected = query_projected.reshape(batch_size, n_patches, self.projection_dim)
+        
+        key_projected = self.projector(key_patches.reshape(-1, max_feature_dim))
+        key_projected = key_projected.reshape(batch_size, n_patches, self.projection_dim)
+        
+        ref_projected = self.projector(ref_patches.reshape(-1, max_feature_dim))
+        ref_projected = ref_projected.reshape(batch_size, n_patches, self.projection_dim)
+        
+        # Вычисляем контрастную потерю
+        # Якорь: запрос, положительные: ключи, отрицательные: эталон из других изображений
+        contrastive_loss = self._compute_contrastive_loss(
+            anchor_features=query_projected,
+            positive_features=key_projected,
+            negative_features=ref_projected
+        )
+        
+        # Вычисляем градиентную потерю между ключом и эталоном
+        gradient_loss = self._compute_gradient_loss(key, reference)
+        
+        # Общая потеря: контрастная + градиентная (с весовым коэффициентом)
+        total_loss = contrastive_loss + 0.5 * gradient_loss
+        
+        return total_loss
+
+
 class PatchSampler(nn.Module):
     """
     Модуль для выбора патчей из карт признаков.
