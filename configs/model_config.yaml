@@ -1,0 +1,165 @@
+# TintoraAI: Конфигурация архитектуры модели
+# --------------------------------------------
+# Этот файл содержит настройки архитектуры нейронной сети TintoraAI,
+# включая параметры всех core-компонентов и интеллектуальных модулей.
+
+# Общие параметры модели
+model:
+  name: "TintoraAI"
+  version: "1.0.0"
+  description: "Модель колоризации с Swin-UNet, ViT и интеллектуальными модулями"
+  img_size: 256  # Размер входного изображения
+  in_channels: 1  # Канал L для LAB цветового пространства
+  out_channels: 2  # Каналы a и b для LAB цветового пространства
+  color_space: "lab"  # lab, rgb, yuv
+
+# Swin-UNet Backbone
+swin_unet:
+  embed_dim: 96  # Начальная размерность эмбеддингов
+  depths: [2, 2, 6, 2]  # Глубина каждого уровня Swin блоков
+  num_heads: [3, 6, 12, 24]  # Количество голов внимания на каждом уровне
+  window_size: 8  # Размер окна для shifted window attention
+  mlp_ratio: 4.0  # Соотношение размеров MLP к размеру эмбеддингов
+  qkv_bias: true  # Использовать смещение для Q, K, V проекций
+  qk_scale: null  # Масштабирование для Q, K (null = 1/sqrt(head_dim))
+  drop_rate: 0.0  # Dropout для внутренних слоев
+  attn_drop_rate: 0.0  # Dropout для attention
+  drop_path_rate: 0.2  # Вероятность для stochastic depth
+  ape: false  # Использовать absolute position embedding
+  patch_norm: true  # Нормализация патчей
+  use_checkpoint: false  # Использовать gradient checkpointing для экономии памяти
+  return_intermediate: true  # Возвращать промежуточные результаты
+
+# Vision Transformer для семантического понимания
+vit_semantic:
+  patch_size: 16  # Размер патча для ViT
+  embed_dim: 768  # Размерность эмбеддингов
+  depth: 12  # Количество Transformer блоков
+  num_heads: 12  # Количество голов внимания
+  mlp_ratio: 4.0  # Соотношение размеров MLP к размеру эмбеддингов
+  qkv_bias: true  # Использовать смещение для Q, K, V проекций
+  qk_scale: null  # Масштабирование для Q, K
+  drop_rate: 0.0  # Вероятность Dropout
+  attn_drop_rate: 0.0  # Вероятность Dropout для attention
+  drop_path_rate: 0.1  # Вероятность для stochastic depth
+  hybrid_backbone: null  # Использовать гибридный backbone
+  norm_layer: "layernorm"  # Тип нормализации (layernorm, batchnorm)
+  output_type: "feature_map"  # feature_map, cls_token
+
+# Feature Pyramid Network с Pyramid Pooling
+fpn_pyramid:
+  in_channels_list: [96, 192, 384, 768]  # Соответствует embed_dim * [1, 2, 4, 8]
+  out_channels: 256  # Выходные каналы для каждого уровня FPN
+  use_pyramid_pooling: true  # Использовать Pyramid Pooling Module
+  pool_scales: [1, 2, 3, 6]  # Масштабы для Pyramid Pooling
+  fusion_type: "sum"  # sum, concat
+  use_residual: true  # Использовать остаточные соединения
+  use_attention: true  # Применять attention к объединенным признакам
+  activation: "relu"  # relu, leaky_relu, gelu
+  normalize_outputs: true  # Нормализация выходных значений
+  interpolation_mode: "bilinear"  # bilinear, nearest
+
+# Cross-Attention Bridge между Swin-UNet и ViT
+cross_attention_bridge:
+  swin_dim: 256  # Соответствует fpn.out_channels
+  vit_dim: 768  # Соответствует vit.embed_dim
+  num_heads: 8  # Количество голов attention
+  mlp_ratio: 4.0  # Соотношение для MLP
+  qkv_bias: true  # Использовать смещение для Q, K, V проекций
+  dropout_rate: 0.1  # Вероятность Dropout
+  fusion_type: "gated"  # gated, additive, concat
+  normalize_before: true  # Применять нормализацию перед attention
+  normalize_after: true  # Применять нормализацию после attention
+  use_residual: true  # Использовать остаточные соединения
+
+# Multi-Head Feature Fusion Module
+feature_fusion:
+  in_channels_list: [256, 768]  # [fpn.out_channels, vit.embed_dim]
+  out_channels: 512  # Выходная размерность признаков
+  num_heads: 8  # Количество голов fusion
+  mlp_ratio: 2.0  # Соотношение для MLP
+  dropout_rate: 0.1  # Вероятность Dropout
+  normalize_inputs: true  # Нормализация входных данных
+  normalize_outputs: true  # Нормализация выходных данных
+  attention_type: "scaled_dot_product"  # scaled_dot_product, multi_head
+  spatial_squeeze: false  # Сжатие пространственных размерностей
+  adaptive_fusion: true  # Адаптивные веса для каждого источника признаков
+  use_context: true  # Использовать контекстную информацию
+
+# GuideNet для цветовых советов
+guide_net:
+  enabled: true  # Включить модуль GuideNet
+  input_channels: 1  # Канал L
+  advice_channels: 2  # Каналы a и b
+  feature_dim: 64  # Размерность внутренних признаков
+  num_layers: 6  # Количество слоев
+  kernel_size: 3  # Размер ядра для свёрток
+  use_attention: true  # Использовать механизмы attention
+  use_confidence: true  # Генерировать карту уверенности для советов
+  confidence_threshold: 0.75  # Порог для использования советов
+  reward_learning: true  # Обучение с подкреплением для советов
+  reward_weight: 1.0  # Вес для reward signal
+  fusion_type: "gated"  # gated, weighted, adaptive
+
+# GAN Discriminator с rewards
+discriminator:
+  enabled: true  # Включить дискриминатор
+  input_nc: 3  # Количество входных каналов (L + a + b или RGB)
+  ndf: 64  # Количество фильтров в первом слое
+  n_layers: 3  # Количество слоев дискриминатора
+  normalization: "instance"  # batch, instance, layer, spectral
+  use_spectral_norm: true  # Использовать spectral normalization
+  gan_mode: "lsgan"  # vanilla, lsgan, wgangp, hinge
+  reward_type: "adaptive"  # fixed, adaptive, dynamic
+  reward_scale: 0.1  # Масштаб наград
+  penalty_weight: 10.0  # Вес для gradient penalty в WGAN-GP
+  multi_scale: false  # Использовать multi-scale дискриминатор
+
+# Style Transfer Component
+style_transfer:
+  enabled: true  # Включить компонент переноса стиля
+  content_weight: 1.0  # Вес для content loss
+  style_weight: 100.0  # Вес для style loss
+  style_layers: ["conv1_1", "conv2_1", "conv3_1", "conv4_1", "conv5_1"]  # Слои для извлечения стиля
+  content_layers: ["conv4_2"]  # Слои для извлечения содержимого
+  preserve_color: true  # Сохранять цветовую гамму контента
+  adaptive_weight: true  # Адаптивное взвешивание потерь
+  normalization_mean: [0.485, 0.456, 0.406]  # Среднее для нормализации
+  normalization_std: [0.229, 0.224, 0.225]  # Стандартное отклонение для нормализации
+  style_interpolation_weights: null  # Веса для интерполяции стилей
+
+# Memory Bank для самообучения
+memory_bank:
+  enabled: true  # Включить Memory Bank
+  feature_dim: 256  # Размерность признаков для хранения
+  max_items: 1000  # Максимальное количество элементов в банке
+  index_type: "flat"  # flat, hnsw, ivf
+  use_fusion: true  # Использовать fusion при поиске
+  temperature: 0.07  # Температура для cosine similarity
+  top_k: 5  # Количество ближайших соседей для запроса
+  update_frequency: 10  # Частота обновления банка (в батчах)
+  similarity_threshold: 0.75  # Порог сходства для обновления
+  update_momentum: 0.9  # Momentum для обновления
+
+# Uncertainty Estimation
+uncertainty:
+  enabled: true  # Включить оценку неопределенности
+  method: "guided"  # guided, monte_carlo, ensemble
+  num_samples: 5  # Количество сэмплов для Monte Carlo
+  dropout_rate: 0.2  # Вероятность Dropout для MC Dropout
+  use_evidential: true  # Использовать evidential learning
+  temperature: 1.0  # Температура для calibration
+  visualization_type: "heatmap"  # heatmap, contour, overlay
+
+# Few-Shot / Cross-Domain адаптация
+adaptable:
+  enabled: true  # Включить адаптацию
+  adapter_type: "standard"  # standard, film, residual
+  bottleneck_dim: 64  # Размерность bottleneck
+  adaptation_layers: [0, 1, 2, 3]  # Слои для адаптации
+  shot_number: 5  # Количество примеров для адаптации
+  meta_learning: true  # Использовать meta-learning
+  fine_tuning_steps: 10  # Шаги для fine-tuning
+  learning_rate: 0.001  # Learning rate для адаптации
+  adaptation_momentum: 0.9  # Momentum для обновления параметров
+  reset_after_adaptation: true  # Сбрасывать адаптацию после использования

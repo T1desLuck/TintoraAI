@@ -1,0 +1,145 @@
+# TintoraAI: Конфигурация функций потерь
+# -------------------------------------
+# Этот файл содержит настройки функций потерь, используемых для обучения модели TintoraAI,
+# включая веса компонентов потерь, параметры и стратегии балансировки.
+
+# L1 Loss
+l1_loss:
+  enabled: true  # Включить L1 Loss
+  weight: 10.0  # Вес L1 Loss
+  target: "color"  # color, lab_ab, rgb
+  masked: false  # Использовать маску для потери
+  mask_threshold: 0.5  # Порог для создания маски
+  per_channel: false  # Вычислять потерю отдельно для каждого канала
+  reduction: "mean"  # mean, sum, none
+  gradient_weighted: false  # Взвешивать потерю по градиентам изображения
+
+# MSE Loss (L2)
+mse_loss:
+  enabled: false  # Включить MSE Loss
+  weight: 10.0  # Вес MSE Loss
+  target: "color"  # color, lab_ab, rgb
+  masked: false  # Использовать маску для потери
+  per_channel: false  # Вычислять потерю отдельно для каждого канала
+  reduction: "mean"  # mean, sum, none
+
+# PatchNCE Loss для контрастного обучения
+patch_nce:
+  enabled: true  # Включить PatchNCE Loss
+  weight: 1.0  # Вес PatchNCE Loss
+  temperature: 0.07  # Температура для softmax
+  patch_size: 16  # Размер патчей
+  n_patches: 256  # Количество патчей
+  normalize: true  # Нормализовать признаки
+  use_mlp: true  # Использовать MLP для проекции признаков
+  num_layers: 2  # Количество слоев в MLP
+  bidirectional: true  # Двунаправленное контрастное обучение
+  stop_gradient: false  # Остановка градиентов для целевой ветви
+  num_negatives: 0  # Количество явных негативных примеров (0 = все остальные патчи)
+  hard_negative_mining: false  # Использовать hard negative mining
+  nce_includes_all_negatives_from_minibatch: true  # Использовать все негативы из минибатча
+  gradient_masked: false  # Маскировать градиенты с малыми значениями
+
+# VGG Perceptual Loss
+vgg_perceptual:
+  enabled: true  # Включить VGG Perceptual Loss
+  weight: 1.0  # Вес VGG Perceptual Loss
+  layers: ["relu1_2", "relu2_2", "relu3_3", "relu4_3"]  # Используемые слои VGG
+  layer_weights: [0.25, 0.25, 0.25, 0.25]  # Веса для каждого слоя
+  criterion: "l1"  # Критерий сравнения (l1, l2, huber)
+  resize: true  # Изменять размер тензоров для соответствия ожидаемому размеру VGG
+  normalize: true  # Нормализовать тензоры перед передачей в VGG
+  vgg_type: "vgg19"  # Тип VGG (vgg16, vgg19)
+  use_pretrained: true  # Использовать предварительно обученные веса VGG
+  no_grad: true  # Отключить вычисление градиентов для VGG
+  spatial_weights: null  # Пространственные веса для отдельных областей изображения
+  consistency_weight: 0.5  # Вес для consistency loss (проверка согласованности между масштабами)
+
+# GAN Loss для дискриминатора
+gan_loss:
+  enabled: true  # Включить GAN Loss
+  weight: 0.1  # Вес GAN Loss
+  gan_mode: "lsgan"  # vanilla, lsgan, wgangp, hinge
+  real_label_val: 1.0  # Значение для реальных примеров
+  fake_label_val: 0.0  # Значение для фейковых примеров
+  smooth_labels: true  # Использовать сглаживание меток
+  smooth_factor: 0.1  # Фактор сглаживания меток
+  gp_weight: 10.0  # Вес для gradient penalty (WGAN-GP)
+  use_spectral_norm: true  # Использовать spectral normalization
+  reward_weight: 0.5  # Вес для rewards в системе наград и наказаний
+  discriminator_update_freq: 1  # Частота обновления дискриминатора (для каждого шага генератора)
+  feature_matching: false  # Использовать feature matching loss
+  feature_matching_weight: 10.0  # Вес для feature matching loss
+
+# Dynamic Loss Balancer
+dynamic_balancer:
+  enabled: true  # Включить Dynamic Loss Balancer
+  strategy: "adaptive"  # adaptive, homoscedastic, equal, fixed
+  target_metric: "lpips"  # Целевая метрика для оптимизации (lpips, ssim, psnr)
+  learning_rate: 0.01  # Скорость обучения для весов потерь
+  weight_decay: 0.001  # Регуляризация весов потерь
+  update_freq: 1  # Частота обновления весов (в эпохах)
+  warm_up_epochs: 5  # Эпохи разогрева перед началом балансировки
+  min_weight_ratio: 0.1  # Минимальное отношение между самым большим и маленьким весом
+  max_weight_value: 100.0  # Максимальное значение веса
+  constraint_type: "sum"  # Ограничение на веса (sum, norm, none)
+  initial_weights:  # Начальные веса для каждой потери
+    l1: 10.0
+    mse: 10.0
+    patch_nce: 1.0
+    vgg: 1.0
+    gan: 0.1
+
+# Reward System (система наград и наказаний)
+reward_system:
+  enabled: true  # Включить систему наград и наказаний
+  guide_net:  # Настройки для GuideNet
+    reward_weight: 1.0  # Вес наград для GuideNet
+    penalty_weight: 1.5  # Вес штрафов для GuideNet
+    confidence_threshold: 0.7  # Порог уверенности для советов
+    quality_based_rewards: true  # Награды на основе качества советов
+  discriminator:  # Настройки для Discriminator
+    reward_weight: 1.0  # Вес наград для Discriminator
+    penalty_weight: 1.2  # Вес штрафов для Discriminator
+    realistic_threshold: 0.8  # Порог реалистичности
+    reward_type: "adaptive"  # fixed, adaptive, dynamic
+  learning_method: "reinforce"  # reinforce, actor-critic, direct
+  reward_scale: 0.1  # Масштаб наград
+  baseline: "moving_average"  # moving_average, value_function, none
+  entropy_weight: 0.01  # Вес энтропии для поощрения исследования
+
+# Consistency Loss
+consistency_loss:
+  enabled: true  # Включить Consistency Loss
+  weight: 0.5  # Вес Consistency Loss
+  type: "multi_scale"  # multi_scale, temporal, augmentation, self
+  scales: [0.5, 1.0, 2.0]  # Масштабы для multi_scale
+  criterion: "l1"  # l1, l2, huber
+  transformation: "color_jitter"  # rotation, color_jitter, crop, none
+  consistency_field: "gradient"  # color, gradient, feature
+
+# Huber Loss
+huber_loss:
+  enabled: false  # Включить Huber Loss
+  weight: 1.0  # Вес Huber Loss
+  delta: 1.0  # Параметр delta для Huber Loss
+  reduction: "mean"  # mean, sum, none
+
+# Структурная потеря (SSIM)
+structural_loss:
+  enabled: false  # Включить SSIM Loss
+  weight: 1.0  # Вес SSIM Loss
+  window_size: 11  # Размер окна для SSIM
+  channel_weights: [1.0, 1.0, 1.0]  # Веса для каждого канала
+  full: true  # Использовать полную версию SSIM (включая contrast, luminance, structure)
+  reduction: "mean"  # mean, sum, none
+
+# Потери по признакам
+feature_loss:
+  enabled: false  # Включить Feature Loss
+  weight: 1.0  # Вес Feature Loss
+  feature_extractor: "self"  # self, vgg, resnet
+  layers: ["layer2", "layer3"]  # Слои для извлечения признаков
+  criterion: "l2"  # l1, l2, cosine
+  normalize: true  # Нормализовать признаки перед вычислением потери
+  spatial_aware: false  # Учитывать пространственную информацию

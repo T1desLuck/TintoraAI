@@ -1,0 +1,223 @@
+# TintoraAI: Конфигурация обучения
+# --------------------------------
+# Этот файл содержит настройки процесса обучения модели TintoraAI,
+# включая параметры оптимизации, планировщика, аугментаций и процесса обучения.
+
+# Параметры данных и датасетов
+data:
+  # Общие настройки данных
+  color_space: "lab"  # lab, rgb, yuv
+  img_size: 256  # Размер изображений для обучения
+  
+  # Пути к данным
+  data_root: "data"
+  grayscale_dir: "train/grayscale"
+  color_dir: "train/color"
+  val_grayscale_dir: "val/grayscale"
+  val_color_dir: "val/color"
+  test_grayscale_dir: "test/grayscale"
+  test_color_dir: "test/color"
+  reference_dataset_path: "data/reference"
+  
+  # Настройки датасетов
+  augmentation_level: "medium"  # none, light, medium, heavy
+  dynamic_batching: true  # Динамическое батчирование для оптимизации памяти
+  max_train_samples: null  # Ограничение количества тренировочных образцов (null = все)
+  max_val_samples: null  # Ограничение количества валидационных образцов
+  class_balanced: true  # Сбалансированная выборка по классам
+  prefetch_factor: 2  # Множитель для предварительной загрузки
+  
+  # Стратегии семплирования
+  sampler_type: "random"  # random, weighted, sequential
+  weight_by_class: false  # Взвешивание семплов по классам
+  weight_by_difficulty: false  # Взвешивание по сложности колоризации
+
+# Параметры обучения
+training:
+  # Основные параметры
+  batch_size: 16  # Размер батча
+  epochs: 100  # Количество эпох
+  val_freq: 1  # Частота валидации (в эпохах)
+  save_freq: 5  # Частота сохранения чекпоинтов (в эпохах)
+  log_freq: 10  # Частота логирования метрик (в итерациях)
+  num_workers: 4  # Количество рабочих процессов для загрузки данных
+  seed: 42  # Фиксированный сид для воспроизводимости
+  
+  # Стратегии обучения
+  mixed_precision: true  # Использовать смешанную точность (FP16/FP32)
+  gradient_accumulation_steps: 1  # Шаги накопления градиента
+  max_grad_norm: 1.0  # Максимальная норма градиента для обрезки
+  early_stopping: true  # Использовать early stopping
+  patience: 10  # Терпение для early stopping (в эпохах)
+  
+  # Распределенное обучение
+  distributed: false  # Использовать распределенное обучение
+  sync_bn: true  # Синхронизировать BatchNorm в распределенном обучении
+  local_rank: 0  # Локальный ранг для распределенного обучения
+  find_unused_parameters: true  # Находить неиспользуемые параметры в DDP
+
+# Параметры оптимизатора
+optimizer:
+  # Основные настройки
+  type: "adam"  # adam, adamw, sgd, radam, adagrad, rmsprop
+  lr: 0.0002  # Скорость обучения (learning rate)
+  beta1: 0.5  # Beta1 для Adam
+  beta2: 0.999  # Beta2 для Adam
+  weight_decay: 0.0001  # L2 регуляризация
+  
+  # Параметры для SGD
+  momentum: 0.9  # Momentum для SGD
+  nesterov: true  # Использовать Nesterov momentum для SGD
+  
+  # Группы параметров с разными LR
+  parameter_groups:
+    backbone: 1.0  # Множитель LR для backbone
+    head: 1.0  # Множитель LR для head
+    discriminator: 0.5  # Множитель LR для discriminator
+    guide_net: 1.0  # Множитель LR для GuideNet
+
+# Параметры планировщика скорости обучения
+scheduler:
+  # Тип планировщика
+  type: "cosine"  # cosine, step, multistep, plateau, cyclic, onecycle, constant
+  
+  # Общие параметры
+  min_lr: 0.00001  # Минимальная скорость обучения
+  warmup_epochs: 5  # Количество эпох для разогрева
+  warmup_start_lr: 0.0001  # Начальная скорость обучения для разогрева
+  
+  # Параметры для StepLR
+  step_size: 30  # Шаг для StepLR
+  gamma: 0.1  # Множитель для StepLR
+  
+  # Параметры для MultiStepLR
+  milestones: [30, 60, 90]  # Вехи для MultiStepLR
+  
+  # Параметры для CosineAnnealingLR
+  T_max: null  # Максимальное количество итераций (null = epochs)
+  eta_min: 0.000001  # Минимальное значение LR для косинусного затухания
+  
+  # Параметры для ReduceLROnPlateau
+  patience: 5  # Терпение для ReduceLROnPlateau
+  factor: 0.5  # Коэффициент уменьшения LR для ReduceLROnPlateau
+  threshold: 0.0001  # Порог для измерения улучшения
+  mode: "min"  # min или max для ReduceLROnPlateau
+
+# Параметры аугментаций
+augmentations:
+  # Геометрические преобразования
+  horizontal_flip: true  # Горизонтальное отражение
+  vertical_flip: false  # Вертикальное отражение
+  rotate: true  # Поворот
+  scale: true  # Масштабирование
+  crop: true  # Кадрирование
+  
+  # Яркость и контраст
+  brightness: 0.1  # Диапазон изменения яркости
+  contrast: 0.1  # Диапазон изменения контраста
+  
+  # Шумы и искажения
+  gaussian_noise: 0.01  # Гауссовский шум
+  jpeg_compression: 0.0  # JPEG сжатие (0 = выключено)
+  blur: 0.0  # Размытие (0 = выключено)
+  
+  # Дополнительные аугментации
+  cutout: 0.0  # Вероятность применения cutout
+  mixup: 0.0  # Коэффициент mixup (0 = выключено)
+  cutmix: 0.0  # Вероятность применения cutmix
+  
+  # Стратегия аугментации
+  strategy: "default"  # default, heavy, custom
+  random_erase_prob: 0.0  # Вероятность случайного стирания
+  random_erase_scale: [0.02, 0.33]  # Диапазон масштаба для random_erase
+  jitter_prob: 0.5  # Вероятность цветовых искажений
+
+# Параметры чекпоинтов
+checkpoint:
+  # Настройки сохранения чекпоинтов
+  save_best: true  # Сохранять лучшую модель
+  max_to_keep: 5  # Максимальное количество сохраняемых чекпоинтов
+  metric: "val_loss"  # Метрика для определения лучшей модели
+  mode: "min"  # min или max для сравнения метрик
+  
+  # Настройки возобновления обучения
+  resume: false  # Возобновить обучение с последнего чекпоинта
+  resume_path: null  # Путь к чекпоинту для возобновления
+  strict_loading: true  # Строгая загрузка чекпоинта
+  
+  # Экспорт модели
+  export_format: "pytorch"  # pytorch, onnx, tensorrt
+  export_path: "experiments/models"  # Путь для экспорта модели
+  quantization: false  # Квантизация модели при экспорте
+  pruning: false  # Прунинг модели при экспорте
+
+# Tensorboard и логирование
+tensorboard:
+  # Настройки Tensorboard
+  enabled: true  # Включить логирование в Tensorboard
+  log_dir: "experiments/logs/tensorboard"  # Директория для логов Tensorboard
+  
+  # Что логировать
+  log_metrics: true  # Логировать метрики
+  log_images: true  # Логировать изображения
+  log_parameters: false  # Логировать параметры модели
+  log_gradients: false  # Логировать градиенты
+  
+  # Частота логирования
+  image_log_freq: 100  # Частота логирования изображений (в итерациях)
+  histogram_freq: 0  # Частота логирования гистограмм (0 = выключено)
+  max_images: 8  # Максимальное количество изображений для логирования
+
+# Специальные параметры обучения для модулей
+modules:
+  # GuideNet
+  guide_net:
+    enabled: true  # Включить обучение GuideNet
+    start_epoch: 0  # Эпоха начала обучения
+    loss_weight: 1.0  # Вес потери для GuideNet
+    confidence_weight: 0.5  # Вес потери уверенности
+    
+  # Discriminator
+  discriminator:
+    enabled: true  # Включить обучение Discriminator
+    start_epoch: 5  # Эпоха начала обучения
+    d_steps: 1  # Шаги обновления дискриминатора на каждый шаг генератора
+    loss_weight: 0.1  # Вес потери для Discriminator
+    
+  # Memory Bank
+  memory_bank:
+    enabled: true  # Включить обучение Memory Bank
+    start_epoch: 0  # Эпоха начала обучения
+    update_interval: 10  # Интервал обновления банка (в итерациях)
+    
+  # Style Transfer
+  style_transfer:
+    enabled: false  # Включить обучение Style Transfer
+    start_epoch: 10  # Эпоха начала обучения
+    style_weight: 0.5  # Вес стиля для обучения
+    
+  # Few-Shot Adaptation
+  few_shot:
+    enabled: true  # Включить Few-Shot адаптацию
+    start_epoch: 20  # Эпоха начала обучения
+    adaptation_steps: 10  # Шаги адаптации
+    adaptation_freq: 5  # Частота адаптации (в эпохах)
+    adaptation_lr: 0.0001  # Learning rate для адаптации
+
+# Валидация и тестирование
+validation:
+  # Настройки валидации
+  batch_size: 32  # Размер батча для валидации
+  frequency: 1  # Частота валидации (в эпохах)
+  samples_limit: null  # Ограничение числа образцов для валидации
+  
+  # Метрики для валидации
+  metrics: ["psnr", "ssim", "lpips", "fid"]  # Метрики для вычисления
+  main_metric: "lpips"  # Основная метрика для отслеживания
+  target_lpips: 0.20  # Целевое значение LPIPS
+  target_ssim: 0.82  # Целевое значение SSIM
+  
+  # Визуализация
+  visualize: true  # Визуализировать результаты валидации
+  num_visualization_samples: 8  # Количество образцов для визуализации
+  save_images: true  # Сохранять изображения для валидации

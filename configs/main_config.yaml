@@ -1,0 +1,136 @@
+# TintoraAI: Основной конфигурационный файл
+# --------------------------------------------
+# Этот файл содержит общие настройки проекта TintoraAI,
+# включая параметры путей, логирования, аппаратного обеспечения
+# и общих параметров системы.
+
+# Информация о проекте
+project:
+  name: "TintoraAI"
+  version: "1.0.0"
+  description: "Современная система колоризации черно-белых изображений с использованием глубокого обучения"
+  author: "T1desLuck"
+  created_date: "2025-08-08"
+
+# Пути к директориям
+paths:
+  # Основные директории
+  data_root: "data"
+  experiments: "experiments"
+  input: "input"
+  output: "output"
+  assets: "assets"
+  configs: "configs"
+  monitoring: "monitoring"
+  
+  # Поддиректории для данных
+  train_data: "${paths.data_root}/train"
+  val_data: "${paths.data_root}/val"
+  test_data: "${paths.data_root}/test"
+  reference_data: "${paths.data_root}/reference"
+  samples: "${paths.data_root}/samples"
+  
+  # Поддиректории для входных данных
+  single_input: "${paths.input}/single"
+  batch_input: "${paths.input}/batch"
+  queue_input: "${paths.input}/queue"
+  
+  # Поддиректории для выходных данных
+  colorized_output: "${paths.output}/colorized"
+  comparisons_output: "${paths.output}/comparisons"
+  uncertainty_maps_output: "${paths.output}/uncertainty_maps"
+  metadata_output: "${paths.output}/metadata"
+  
+  # Поддиректории для экспериментов
+  logs: "${paths.experiments}/logs"
+  checkpoints: "${paths.experiments}/checkpoints"
+  results: "${paths.experiments}/results"
+  experiment_configs: "${paths.experiments}/configs"
+  
+  # Поддиректории для мониторинга
+  performance_logs: "${paths.monitoring}/performance"
+  memory_logs: "${paths.monitoring}/memory_usage"
+  error_logs: "${paths.monitoring}/error_logs"
+
+# Параметры логирования
+logging:
+  # Общие настройки логирования
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_to_file: true
+  log_to_console: true
+  log_dir: "${paths.logs}"
+  
+  # Формат логирования
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  date_format: "%Y-%m-%d %H:%M:%S"
+  
+  # Настройки файлов журналов
+  max_file_size_mb: 10
+  backup_count: 5
+  
+  # Детализированное логирование для отдельных компонентов
+  component_levels:
+    trainer: "INFO"
+    inference: "INFO"
+    metrics: "INFO"
+    api: "INFO"
+
+# Аппаратные настройки
+hardware:
+  # Настройки GPU
+  use_gpu: true
+  device_id: 0  # ID устройства CUDA (0 - первая GPU)
+  multi_gpu: false
+  device_ids: [0]  # Список ID устройств для multi-GPU режима
+  
+  # Настройки производительности
+  precision: "float32"  # float32, float16, bfloat16
+  deterministic: false
+  benchmark: true
+  cudnn_benchmark: true
+  
+  # Настройки ресурсов
+  num_workers: 4
+  prefetch_factor: 2
+  pin_memory: true
+  memory_limit_gb: null  # null = без ограничений
+
+# Настройки мониторинга
+monitoring:
+  # Мониторинг производительности
+  enable_performance_tracking: true
+  metrics_interval_sec: 10
+  profile_memory: true
+  profile_gpu: true
+  
+  # Логирование статистики
+  log_system_stats: true
+  log_memory_usage: true
+  log_gpu_usage: true
+  
+  # Экспорт метрик
+  export_metrics: false
+  export_format: "json"  # json, csv, tensorboard
+  
+  # Отчетность
+  generate_reports: true
+  report_frequency: "daily"  # hourly, daily, weekly, monthly
+
+# Настройки безопасности
+security:
+  # Уровень доступа
+  api_authentication: false
+  require_api_key: false
+  api_key: ""
+  
+  # Ограничения
+  max_requests_per_minute: 60
+  max_batch_size: 32
+
+# Настройки отладки
+debug:
+  enabled: false
+  verbose_output: false
+  save_intermediate_outputs: false
+  profile_code: false
+  trace_execution: false
