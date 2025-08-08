@@ -30,6 +30,7 @@ import logging
 import inspect
 from typing import Dict, List, Union, Optional, Any, Callable
 from enum import Enum
+from typing import Tuple
 import readline  # Для улучшенного ввода в консоли
 
 
