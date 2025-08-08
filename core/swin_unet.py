@@ -763,3 +763,7 @@ if __name__ == "__main__":
     x = torch.randn(2, 1, 256, 256)
     y = model(x)
     print(f"Вход: {x.shape}, Выход: {y.shape}")
+
+
+# Alias for backward compatibility
+create_swin_unet_model = create_colorizer_swin_unet

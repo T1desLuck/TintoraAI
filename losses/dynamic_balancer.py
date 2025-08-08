@@ -519,7 +519,7 @@ class AdaptiveLossBalancer(nn.Module):
         
         # Буферы для отслеживания статистик
         self.register_buffer('epoch', torch.zeros(1, dtype=torch.long))
-        self.register_buffer('step', torch.zeros(1, dtype=torch.long))
+        self.register_buffer('training_step', torch.zeros(1, dtype=torch.long))
         self.register_buffer('loss_means', torch.zeros(self.num_losses))
         self.register_buffer('loss_stds', torch.ones(self.num_losses))
         
@@ -547,7 +547,7 @@ class AdaptiveLossBalancer(nn.Module):
         """
         Увеличивает счетчик шагов.
         """
-        self.step[0] += 1
+        self.training_step[0] += 1
         
     def get_scheduled_weights(self):
         """

@@ -1345,3 +1345,7 @@ if __name__ == "__main__":
                 print(f"  {k}: {v}")
         else:
             print(f"{key}: {value}")
+
+
+# Alias for backward compatibility
+create_memory_bank = create_memory_bank_module
