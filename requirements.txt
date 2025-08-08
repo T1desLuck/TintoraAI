@@ -6,6 +6,7 @@ numpy>=1.19.5
 scipy>=1.7.0
 pillow>=9.0.0
 matplotlib>=3.4.0
+timm>=1.0.19
 
 # Библиотеки для обработки изображений
 opencv-python>=4.5.3
