@@ -28,7 +28,7 @@ import time
 import threading
 import logging
 import inspect
-from typing import Dict, List, Union, Optional, Any, Callable
+from typing import Dict, List, Union, Optional, Any, Callable, Tuple
 from enum import Enum
 import readline  # Для улучшенного ввода в консоли
 

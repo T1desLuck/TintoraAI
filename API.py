@@ -25,6 +25,7 @@ import base64
 import logging
 import threading
 import tempfile
+import glob
 from typing import Dict, List, Optional, Union, Any, Tuple
 from datetime import datetime
 from pathlib import Path
@@ -48,12 +49,12 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 # Импорты из модулей проекта
 from inference.predictor import ColorizationPredictor
-from inference.postprocessor import ColorizationPostProcessor
+from inference.postprocessor import ColorizationPostprocessor
 from utils.config_parser import load_config
 from utils.visualization import ColorizationVisualizer
 from utils.user_interaction import UserInteractionModule
-from modules.uncertainty_estimation import UncertaintyEstimation
-from modules.style_transfer import StyleTransfer
+from modules.uncertainty_estimation import UncertaintyEstimationModule
+from modules.style_transfer import StyleTransferModule
 from modules.memory_bank import MemoryBankModule
 
 
@@ -242,11 +243,18 @@ class TintoraAIModel:
             self.model.eval()
             
             # Создаем постпроцессор
-            self.postprocessor = ColorizationPostProcessor(
-                color_space="lab",
-                apply_enhancement=False,
-                saturation=1.0,
-                contrast=1.0,
+            postprocessor_config = {
+                'color_space': 'lab',
+                'output_dir': './output',
+                'save_comparison': False,
+                'color_balance': {'mode': 'neutral', 'strength': 0.5},
+                'saturation': {'mode': 'natural', 'strength': 0.5},
+                'sharpness': {'enabled': False, 'amount': 0.3},
+                'noise_reduction': {'enabled': False, 'strength': 0.5},
+                'artifact_removal': {'enabled': False}
+            }
+            self.postprocessor = ColorizationPostprocessor(
+                config=postprocessor_config,
                 device=self.device
             )
             
@@ -254,20 +262,21 @@ class TintoraAIModel:
             intelligent_modules = {}
             
             # Создаем модуль оценки неопределенности
-            self.uncertainty_module = UncertaintyEstimation(
-                method='guided',
+            self.uncertainty_module = UncertaintyEstimationModule.create_mc_dropout_estimator(
+                colorizer=self.model,
                 num_samples=5,
-                dropout_rate=0.2,
-                device=self.device
-            ).to(self.device)
+                dropout_rate=0.2
+            )
             intelligent_modules['uncertainty'] = self.uncertainty_module
             
             # Модуль переноса стиля
-            self.style_transfer = StyleTransfer(
-                content_weight=1.0,
-                style_weight=100.0,
-                device=self.device
-            )
+            self.style_transfer = StyleTransferModule(
+                input_channels=3,
+                output_channels=2,
+                style_dim=512,
+                use_attention=True,
+                use_histogram_loss=True
+            ).to(self.device)
             intelligent_modules['style_transfer'] = self.style_transfer
             
             # Модуль банка памяти
@@ -448,11 +457,13 @@ class TintoraAIModel:
             # Получаем настройки стиля
             style_settings = self._process_style_settings(style, saturation, contrast, enhance)
             
-            # Обновляем настройки постпроцессора
-            self.postprocessor.color_space = color_space
-            self.postprocessor.saturation = style_settings.get('saturation', 1.0)
-            self.postprocessor.contrast = style_settings.get('contrast', 1.0)
-            self.postprocessor.apply_enhancement = style_settings.get('enhance', False)
+            # Обновляем настройки постпроцессора через config
+            self.postprocessor.config.update({
+                'color_space': color_space,
+                'saturation': {'mode': 'natural', 'strength': style_settings.get('saturation', 1.0)},
+                'color_balance': {'mode': 'neutral', 'strength': style_settings.get('contrast', 1.0)},
+                'sharpness': {'enabled': style_settings.get('enhance', False), 'amount': 0.3}
+            })
             
             # Обрабатываем команды и советы, если указаны
             if guidance:
@@ -478,11 +489,10 @@ class TintoraAIModel:
                 style_tensor = torch.from_numpy(custom_style_image).permute(2, 0, 1).unsqueeze(0).to(self.device)
                 
                 # Выполняем перенос стиля
-                styled_result = self.style_transfer.transfer_style(
+                styled_result = self.style_transfer.apply_style_transfer(
                     content_image=colorized_tensor,
-                    style_image=style_tensor,
-                    style_weight=style_strength * 100.0,  # Масштабируем вес стиля
-                    num_steps=20  # Ограниченное число шагов для API
+                    style_reference=style_tensor,
+                    alpha=style_strength  # Интенсивность применения стиля
                 )
                 
                 # Преобразуем обратно в numpy

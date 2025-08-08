@@ -910,3 +910,7 @@ if __name__ == "__main__":
     print("\nReward Statistics:")
     for key, value in reward_stats.items():
         print(f"{key}: {value}")
+
+
+# Alias for backward compatibility
+Discriminator = MotivationalDiscriminator

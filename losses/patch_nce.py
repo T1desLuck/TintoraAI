@@ -801,6 +801,10 @@ def create_patch_nce_loss(config=None):
     return loss_fn
 
 
+# Alias for backward compatibility
+PatchNCELoss = MultiScalePatchwiseLoss
+
+
 if __name__ == "__main__":
     # Пример использования
     

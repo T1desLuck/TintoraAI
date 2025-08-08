@@ -839,7 +839,78 @@ def create_simple_readme(project_root: str):
 ### Установка
 
 ```bash
-git clone https://github.com/yourusername/tintora-ai.git
-cd tintora-ai
+git clone https://github.com/T1desLuck/TintoraAI.git
+cd TintoraAI
 pip install -r requirements.txt
 python scripts/setup.py
+```
+
+### Использование
+
+```bash
+# Колоризация одного изображения
+python scripts/inference.py --single input/your_image.jpg --checkpoint model.pth
+
+# Пакетная обработка
+python scripts/batch_process.py --input-dir input/batch --checkpoint model.pth
+
+# Интерактивное демо
+python scripts/demo.py --checkpoint model.pth
+```
+
+## Документация
+
+- [Инструкция по установке](INSTALL.md)
+- [Руководство по обучению](TRAINING.md)
+- [API документация](API.md)
+
+## Контакты
+
+- GitHub: https://github.com/T1desLuck/TintoraAI
+- Email: tidesluck@icloud.com
+"""
+
+    try:
+        with open(readme_path, 'w', encoding='utf-8') as f:
+            f.write(readme_content)
+        print_success(f"Создан README.md")
+        return True
+    except Exception as e:
+        print_error(f"Ошибка при создании README.md: {str(e)}")
+        return False
+
+
+def main():
+    """Основная функция настройки проекта."""
+    print_header("Настройка проекта TintoraAI")
+    
+    # Проверяем и создаем директории
+    if not create_directory_structure('.'):
+        print_error("Не удалось создать необходимые директории")
+        return False
+    
+    # Создаем конфигурационные файлы
+    if not generate_config_files('.'):
+        print_error("Не удалось создать конфигурационные файлы")
+        return False
+    
+    # Создаем README файл
+    if not create_simple_readme('.'):
+        print_error("Не удалось создать README файл")
+        return False
+    
+    print_success("Настройка проекта завершена успешно!")
+    print("\n" + "="*80)
+    print("Следующие шаги:")
+    print("1. Поместите ваши данные в директорию datasets/")
+    print("2. Настройте конфигурации в configs/")
+    print("3. Запустите обучение: python scripts/train.py")
+    print("4. Или используйте предобученную модель для инференса")
+    print("="*80)
+    
+    return True
+
+
+if __name__ == "__main__":
+    success = main()
+    exit(0 if success else 1)

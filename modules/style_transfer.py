@@ -732,3 +732,7 @@ if __name__ == "__main__":
     
     # Пример применения стиля из словаря
     result = style_transfer.apply_style_transfer(content_image, style_name="vintage", alpha=1.0)
+
+
+# Alias for backward compatibility
+StyleTransfer = StyleTransferModule

@@ -991,6 +991,10 @@ def create_dynamic_loss_balancer(loss_names, config=None):
     return balancer
 
 
+# Alias for backward compatibility
+DynamicLossBalancer = AdaptiveLossBalancer
+
+
 if __name__ == "__main__":
     # Пример использования
     

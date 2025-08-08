@@ -931,3 +931,7 @@ if __name__ == "__main__":
             print(f"  {key}: список из {len(value)} тензоров с формой {value[0].shape}")
         else:
             print(f"  {key}: {type(value)}")
+
+
+# Alias for backward compatibility
+UncertaintyEstimation = UncertaintyEstimationModule

@@ -1083,7 +1083,7 @@ def train_model(
                     metrics={
                         'train_loss': epoch_losses.get('total', 0),
                         'val_loss': val_losses.get('total', 0) if 'val_losses' in locals() else 0,
-                        **val_metrics if 'val_metrics' in locals() else {}
+                        **(val_metrics if 'val_metrics' in locals() else {})
                     },
                     modules=modules_dict,
                     loss_balancer=loss_balancer,
