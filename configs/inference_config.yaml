@@ -1,0 +1,173 @@
+# TintoraAI: Конфигурация инференса
+# --------------------------------
+# Этот файл содержит настройки для инференса модели TintoraAI,
+# включая параметры предобработки, постобработки и сохранения результатов.
+
+# Общие параметры инференса
+inference:
+  # Базовые настройки
+  color_space: "lab"  # lab, rgb, yuv
+  img_size: 256  # Размер изображения для обработки
+  batch_size: 8  # Размер батча для обработки
+  num_workers: 4  # Количество рабочих процессов
+  use_gpu: true  # Использовать GPU для инференса
+  
+  # Стратегии обработки
+  mixed_precision: true  # Использовать смешанную точность
+  split_large_images: true  # Разделять большие изображения на части
+  max_size_per_split: 1024  # Максимальный размер части
+  overlap: 32  # Перекрытие между частями
+  blending_mode: "linear"  # linear, gaussian
+  
+  # Настройки качества
+  quality_optimization: false  # Использовать оптимизацию качества
+  upscale_factor: 1.0  # Коэффициент увеличения размера (1.0 = без изменений)
+  memory_efficient: true  # Экономия памяти за счет производительности
+
+# Предобработка изображений
+preprocessing:
+  # Общие настройки предобработки
+  resize_mode: "scale_and_pad"  # scale_and_crop, scale_and_pad, just_scale
+  keep_aspect_ratio: true  # Сохранять соотношение сторон
+  pad_mode: "reflect"  # constant, reflect, replicate
+  
+  # Нормализация
+  normalize: true  # Нормализовать изображения
+  mean: [0.5]  # Среднее для нормализации (для L канала)
+  std: [0.5]  # Стандартное отклонение для нормализации
+  
+  # Дополнительная обработка
+  remove_noise: false  # Удалять шум перед колоризацией
+  enhance_contrast: false  # Улучшать контраст перед колоризацией
+  auto_white_balance: false  # Автоматический баланс белого
+  histogram_equalization: false  # Эквализация гистограммы
+
+# Постобработка результатов
+postprocessing:
+  # Базовые настройки постобработки
+  enhance: false  # Применить улучшение результатов
+  saturation: 1.0  # Коэффициент насыщенности (1.0 = оригинальная насыщенность)
+  contrast: 1.0  # Коэффициент контраста (1.0 = оригинальный контраст)
+  
+  # Дополнительные улучшения
+  denoise: false  # Применять шумоподавление
+  denoise_strength: 0.5  # Сила шумоподавления
+  sharpen: false  # Применять увеличение резкости
+  sharpen_strength: 0.3  # Сила увеличения резкости
+  
+  # Специальные эффекты
+  vignette: false  # Применять эффект виньетки
+  grain: false  # Добавлять зерно
+  grain_strength: 0.1  # Сила зерна
+  
+  # Цветокоррекция
+  color_correction: false  # Применять цветокоррекцию
+  auto_balance: false  # Автоматический баланс цветов
+  temperature: 0.0  # Регулировка температуры (-1.0 = холоднее, 1.0 = теплее)
+  tint: 0.0  # Регулировка оттенка (-1.0 = зеленее, 1.0 = пурпурнее)
+
+# Стили и пресеты
+style:
+  # Выбор стиля
+  use_preset: false  # Использовать предустановленный стиль
+  preset_name: "default"  # Имя пресета (default, vintage, vivid, monochrome, cinematic)
+  custom_style_path: null  # Путь к пользовательскому изображению стиля
+  
+  # Параметры переноса стиля
+  style_strength: 0.5  # Сила применения стиля (0.0 = без стиля, 1.0 = полный стиль)
+  preserve_content: true  # Сохранять содержимое изображения
+  preserve_colors: true  # Сохранять цветовую гамму оригинала
+  
+  # Пользовательский стиль
+  content_weight: 1.0  # Вес содержимого при переносе стиля
+  style_weight: 100.0  # Вес стиля при переносе стиля
+  style_scale: 1.0  # Масштаб стилевого изображения
+
+# Настройки вывода
+output:
+  # Основные настройки вывода
+  format: "png"  # png, jpg, webp
+  quality: 95  # Качество сжатия (для jpg, webp)
+  save_comparison: false  # Сохранять сравнение до/после
+  save_uncertainty: false  # Сохранять карту неопределенности
+  save_metadata: true  # Сохранять метаданные обработки
+  
+  # Форматирование имен файлов
+  suffix: ""  # Суффикс для имен выходных файлов
+  filename_template: "{original_name}_{style}{suffix}"  # Шаблон имени файла
+  
+  # Метаданные
+  embed_exif: true  # Встраивать метаданные EXIF
+  metadata_format: "json"  # json, yaml, exif
+  include_processing_info: true  # Включать информацию об обработке в метаданные
+  include_model_info: true  # Включать информацию о модели в метаданные
+  include_timestamp: true  # Включать временную метку в метаданные
+
+# Параметры пакетной обработки
+batch_processing:
+  # Параллельная обработка
+  max_processes: null  # Максимальное количество процессов (null = авто)
+  chunks_size: 10  # Размер чанков для параллельной обработки
+  memory_limit_per_process: null  # Ограничение памяти на процесс в МБ
+  
+  # Настройки очереди
+  queue_size: 100  # Размер очереди заданий
+  monitor_interval: 1.0  # Интервал мониторинга очереди в секундах
+  
+  # Контрольные точки
+  enable_checkpoints: true  # Включить контрольные точки
+  checkpoint_freq: 100  # Частота создания контрольных точек (в количестве файлов)
+  
+  # Настройки очереди файлов
+  queue:
+    interval: 5.0  # Интервал проверки очереди в секундах
+    max_files: 10  # Максимальное количество файлов для обработки за один проход
+    timeout: 0  # Время работы режима очереди в секундах (0 = бесконечно)
+    auto_process: true  # Автоматически обрабатывать файлы при их появлении
+
+# Настройки интеллектуальных модулей
+modules:
+  # GuideNet
+  guide_net:
+    enabled: true  # Использовать GuideNet для советов
+    confidence_threshold: 0.7  # Порог уверенности для использования советов
+    
+  # Memory Bank
+  memory_bank:
+    enabled: true  # Использовать Memory Bank
+    similarity_threshold: 0.75  # Порог сходства для использования примеров из банка
+    top_k: 3  # Количество ближайших примеров для использования
+    
+  # Uncertainty Estimation
+  uncertainty:
+    enabled: true  # Использовать оценку неопределенности
+    visualization_colormap: "inferno"  # Цветовая карта для визуализации
+    
+  # Style Transfer
+  style_transfer:
+    enabled: true  # Использовать перенос стиля
+    num_steps: 20  # Количество шагов оптимизации
+    
+  # Few-Shot Adaptation
+  adaptable:
+    enabled: true  # Использовать адаптацию
+    num_shots: 1  # Количество примеров для адаптации
+    adaptation_steps: 10  # Количество шагов адаптации
+
+# API и интеграция
+api:
+  # Настройки API
+  enable_server: false  # Включить API сервер
+  host: "0.0.0.0"  # Хост для привязки
+  port: 8000  # Порт для привязки
+  workers: 1  # Количество рабочих процессов
+  
+  # Безопасность
+  cors_origins: ["*"]  # Список разрешенных источников для CORS
+  api_key_required: false  # Требовать API ключ
+  api_key: ""  # API ключ
+  
+  # Ограничения
+  max_file_size_mb: 10  # Максимальный размер файла в МБ
+  rate_limit: 60  # Ограничение запросов в минуту
+  timeout: 30  # Таймаут запроса в секундах
