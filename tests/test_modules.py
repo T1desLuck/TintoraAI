@@ -26,7 +26,7 @@ from typing import Dict, List, Tuple, Union, Optional
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from modules.guide_net import GuideNet
-from modules.discriminator import Discriminator
+from modules.discriminator import MotivationalDiscriminator as Discriminator
 from modules.style_transfer import StyleTransfer
 from modules.memory_bank import MemoryBankModule
 from modules.uncertainty_estimation import UncertaintyEstimation
