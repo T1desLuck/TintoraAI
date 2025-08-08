@@ -48,7 +48,7 @@ from losses.dynamic_balancer import DynamicLossBalancer
 
 # Интеллектуальные модули
 from modules.guide_net import GuideNet
-from modules.discriminator import Discriminator
+from modules.discriminator import MotivationalDiscriminator as Discriminator
 from modules.style_transfer import StyleTransfer
 from modules.memory_bank import MemoryBankModule
 from modules.uncertainty_estimation import UncertaintyEstimation
