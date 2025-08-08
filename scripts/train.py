@@ -1312,4 +1312,20 @@ def main():
     Основная функция запуска обучения.
     """
     # Парсинг аргументов командной строки
-    args = parse_args
+    args = parse_args()
+    
+    if args.distributed:
+        # Многопроцессорный запуск
+        world_size = torch.cuda.device_count() if args.world_size == -1 else args.world_size
+        mp.spawn(
+            run_training_process,
+            args=(world_size, args),
+            nprocs=world_size
+        )
+    else:
+        # Однопроцессорный запуск
+        run_training_process(0, 1, args)
+
+
+if __name__ == "__main__":
+    main()
