@@ -1,7 +1,7 @@
 # TintoraAI: Продвинутая система колоризации изображений
 
 <div align="center">
-  <img src="assets/tintorai_logo.png" alt="TintoraAI Logo" width="1024"/>
+  <img src="assets/tintorai_logo3.png" alt="TintoraAI Logo" width="1024"/>
   <h3>Превращайте черно-белые изображения в яркие цветные с помощью ИИ</h3>
   <p>Умная колоризация • Стилистические пресеты • Гибкая настройка</p>
 </div>
