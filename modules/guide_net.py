@@ -20,6 +20,7 @@ GuideNet: Интеллектуальный советник по цветам н
 - Снижает вероятность выбора "безопасных", но неестественных цветов
 """
 
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
