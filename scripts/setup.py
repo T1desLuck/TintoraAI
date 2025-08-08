@@ -838,8 +838,9 @@ def create_simple_readme(project_root: str):
 
 ### Установка
 
-```bash
+"""bash
 git clone https://github.com/yourusername/tintora-ai.git
 cd tintora-ai
 pip install -r requirements.txt
 python scripts/setup.py
+"""
