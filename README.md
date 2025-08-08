@@ -164,7 +164,7 @@ style:
 
 ## 📞 Контакты
 - GitHub Issues: https://github.com/T1desLuck/TintoraAI/issues
-- Email: tintorai@example.com
+- Email: tidesluck@icloud.com
 
 ## 📄 Лицензия
 Этот проект распространяется под лицензией MIT. См. файл LICENSE для более подробной информации.
