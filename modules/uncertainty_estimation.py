@@ -931,3 +931,17 @@ if __name__ == "__main__":
             print(f"  {key}: список из {len(value)} тензоров с формой {value[0].shape}")
         else:
             print(f"  {key}: {type(value)}")
+
+# Алиасы для совместимости
+UncertaintyEstimation = UncertaintyEstimationModule  # Для фабричных методов
+UncertaintyEstimator = MCDropoutUncertainty          # Для прямого использования
+
+# Экспорт всех важных классов
+__all__ = [
+    'UncertaintyEstimationModule',
+    'UncertaintyEstimation',      # алиас
+    'MCDropoutUncertainty',
+    'ProbabilisticColorizer', 
+    'UncertaintyGuidedColorizer',
+    'create_uncertainty_estimator'
+]
