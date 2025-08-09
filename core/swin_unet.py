@@ -707,7 +707,7 @@ class SwinUNet(nn.Module):
         # Декодер (upsample) с skip connections
         for i, layer in enumerate(self.layers_up):
             if i > 0:  # Skip connection начиная со второго слоя декодера
-                x = x + features[self.num_layers - 1 - i]
+                x = x + features_tokens[self.num_layers - 1 - i]
             x = layer(x)
         
         # Финальный слой upsample
