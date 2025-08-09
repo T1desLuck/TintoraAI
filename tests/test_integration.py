@@ -62,7 +62,7 @@ from training.checkpoints import save_checkpoint, load_checkpoint
 
 # Компоненты инференса
 from inference.predictor import ColorizationPredictor
-from inference.postprocessor import ColorizationPostProcessor
+from inference.postprocessor import ColorizationPostprocessor
 
 # Работа с данными
 from datasets.base_dataset import BaseColorizationDataset
