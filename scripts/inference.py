@@ -43,7 +43,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 # Импорты из модулей проекта
 from inference.predictor import ColorizationPredictor
-from inference.postprocessor import ColorizationPostProcessor
+from inference.postprocessor import ColorizationPostprocessor
 from inference.batch_processor import BatchProcessor
 
 from utils.config_parser import load_config
