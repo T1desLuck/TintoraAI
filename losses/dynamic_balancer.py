@@ -933,6 +933,113 @@ class AdaptiveLossBalancer(nn.Module):
         return result
 
 
+class DynamicLossBalancer(nn.Module):
+    """
+    Комплексный балансировщик потерь, объединяющий функциональность всех балансировщиков.
+    
+    Этот класс предоставляет единый интерфейс к системе балансировки потерь,
+    используя комбинацию возможностей LossHistoryTracker, DynamicWeightBalancer
+    и AdaptiveLossBalancer в зависимости от настроек и текущей фазы обучения.
+    
+    Args:
+        loss_names (list): Список имен функций потерь
+        initial_weights (list): Начальные веса функций потерь
+        strategy (str): Стратегия балансировки ('adaptive', 'dynamic', 'fixed')
+        scheduler_type (str): Тип планировщика весов для адаптивной стратегии
+        total_epochs (int): Общее количество эпох обучения
+        adaptive_strategy (str): Подстратегия для адаптивного режима
+        min_weight_ratio (float): Минимальное отношение весов
+        use_loss_uncertainty (bool): Использовать ли неопределенность потерь
+        device (torch.device): Устройство для тензоров
+    """
+    def __init__(self, loss_names, initial_weights=None, strategy='adaptive',
+                 scheduler_type='cosine', total_epochs=200, adaptive_strategy='hybrid',
+                 min_weight_ratio=0.1, use_loss_uncertainty=True, device=None):
+        super(DynamicLossBalancer, self).__init__()
+        
+        self.strategy = strategy
+        self.loss_names = loss_names
+        self.num_losses = len(loss_names)
+        
+        # Создаем трекер истории потерь для всех стратегий
+        self.history_tracker = LossHistoryTracker(
+            window_size=100,
+            num_losses=self.num_losses,
+            device=device
+        )
+        
+        # В зависимости от стратегии инициализируем соответствующий балансировщик
+        if strategy == 'adaptive':
+            self.balancer = AdaptiveLossBalancer(
+                loss_names=loss_names,
+                initial_weights=initial_weights,
+                scheduler_type=scheduler_type,
+                total_epochs=total_epochs,
+                adaptive_strategy=adaptive_strategy,
+                min_weight_ratio=min_weight_ratio,
+                use_loss_uncertainty=use_loss_uncertainty,
+                device=device
+            )
+        else:  # 'dynamic' или 'fixed'
+            self.balancer = DynamicWeightBalancer(
+                loss_names=loss_names,
+                initial_weights=initial_weights,
+                strategy=strategy,
+                device=device
+            )
+    
+    def forward(self, losses, update_stats=True, gradients=None):
+        """
+        Вычисляет взвешенные потери с использованием выбранной стратегии балансировки.
+        
+        Args:
+            losses: Словарь с потерями или список значений потерь
+            update_stats (bool): Обновлять ли статистику потерь
+            gradients: Градиенты потерь для градиентных стратегий
+            
+        Returns:
+            dict: Результат с взвешенными потерями, общей потерей и текущими весами
+        """
+        # Обновляем историю потерь, если нужно
+        if update_stats:
+            if isinstance(losses, dict):
+                loss_values = [losses[name] for name in self.loss_names]
+                self.history_tracker.update(loss_values)
+            else:
+                self.history_tracker.update(losses)
+        
+        # Делегируем работу соответствующему балансировщику
+        return self.balancer(losses, update_stats=update_stats, gradients=gradients)
+    
+    def set_epoch(self, epoch):
+        """
+        Устанавливает текущую эпоху для планировщика весов.
+        
+        Args:
+            epoch (int): Номер текущей эпохи
+        """
+        if hasattr(self.balancer, 'set_epoch'):
+            self.balancer.set_epoch(epoch)
+    
+    def get_weights(self):
+        """
+        Возвращает текущие веса для функций потерь.
+        
+        Returns:
+            dict: Словарь {имя_потери: вес}
+        """
+        return self.balancer.get_weights() if hasattr(self.balancer, 'get_weights') else None
+    
+    def get_loss_trends(self):
+        """
+        Возвращает тренды изменения потерь.
+        
+        Returns:
+            dict: Информация о трендах потерь
+        """
+        return self.history_tracker.get_trend_analysis()
+
+
 # Функция для создания балансировщика потерь
 def create_dynamic_loss_balancer(loss_names, config=None):
     """
@@ -1020,13 +1127,6 @@ if __name__ == "__main__":
             losses = {
                 'pixel_loss': pixel_loss,
                 'perceptual_loss': perceptual_loss,
-                'gan_loss': gan_loss
-            }
-            
-            # Словарь градиентов (для примера)
-            gradients = {
-                'pixel_loss': torch.rand(1) * 10.0,
-                'perceptual_loss': torch.rand(1) * 5.0,
                 'gan_loss': torch.rand(1) * 2.0
             }
             
