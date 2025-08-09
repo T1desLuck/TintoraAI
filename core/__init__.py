@@ -68,7 +68,8 @@ class ColorizerBackbone(nn.Module):
             out_chans=out_channels,
             embed_dim=swin_embed_dim,
             depths=swin_depths,
-            num_heads=swin_num_heads
+            num_heads=swin_num_heads,
+            return_intermediate=True
         )
         
         # ViT для семантического понимания
@@ -137,38 +138,49 @@ class ColorizerBackbone(nn.Module):
         """
         batch_size, _, height, width = x.shape
         
-        # Проход через Swin-UNet (частично - только энкодер)
-        swin_features = []
-        # Здесь нужно извлечь промежуточные признаки из Swin-UNet
-        # В реальной реализации это зависит от деталей SwinUNet
+        # Проход через Swin-UNet с извлечением промежуточных признаков и финального выхода
+        swin_out = self.swin_unet(x)
+        assert isinstance(swin_out, (list, tuple)) and len(swin_out) >= 5, "Ожидается 4 уровня признаков и финальный выход от SwinUNet"
+        swin_features_2d = list(swin_out[:-1])  # список из 4 карт признаков [B,C_i,H_i,W_i]
+        swin_final = swin_out[-1]               # [B,out_channels,H,W]
         
         # Проход через ViT
         vit_output = self.vit_semantic(x)
-        vit_features = vit_output['enriched_features']
+        vit_features = vit_output['enriched_features']  # [B, N_vit, C_vit]
         
         # Проход через FPN с промежуточными признаками из Swin-UNet
-        fpn_output = self.fpn_pyramid(swin_features)
+        fpn_output = self.fpn_pyramid(swin_features_2d)
         
         # Cross-Attention Bridge между Swin-UNet и ViT
-        enhanced_swin, enhanced_vit = self.cross_bridge(
-            swin_features_list=swin_features,
+        # Подготовим списки последовательностей для моста: [B, H_i*W_i, C_i]
+        swin_features_seq = []
+        swin_base_h = swin_features_2d[0].shape[2]
+        swin_base_w = swin_features_2d[0].shape[3]
+        for feat in swin_features_2d:
+            B, C, H_i, W_i = feat.shape
+            swin_features_seq.append(feat.permute(0, 2, 3, 1).contiguous().view(B, H_i * W_i, C))
+
+        vit_patch_res = (height // 16, width // 16)
+        enhanced_swin_seq, enhanced_vit_seq = self.cross_bridge(
+            swin_features_list=swin_features_seq,
             vit_features=vit_features,
-            swin_resolution=(height // 16, width // 16),
-            vit_resolution=(height // 16, width // 16)
+            swin_resolution=(swin_base_h, swin_base_w),
+            vit_resolution=vit_patch_res
         )
+        # Преобразуем улучшенные признаки Swin обратно в 2D карту базового разрешения
+        B = x.shape[0]
+        C_swin0 = swin_features_2d[0].shape[1]
+        enhanced_swin_2d = enhanced_swin_seq.view(B, swin_base_h, swin_base_w, C_swin0).permute(0, 3, 1, 2).contiguous()
         
         # Объединяем все признаки с помощью Feature Fusion
         fusion_input = {
-            "swin_unet": enhanced_swin,
+            "swin_unet": enhanced_swin_2d,
             "fpn": fpn_output['output'],
-            "vit": enhanced_vit
+            "vit": enhanced_vit_seq
         }
-        
         fusion_output = self.feature_fusion(fusion_input)
-        fused_features = fusion_output["fused_features"]
-        
-        # Преобразуем фьюзированные признаки в пространственный формат
-        spatial_features = fused_features.view(batch_size, height // 4, width // 4, -1).permute(0, 3, 1, 2)
+        # Используем пространственные слитые признаки как вход к финальной проекции
+        spatial_features = fusion_output["spatial_features"]
         
         # Финальная проекция для получения ab каналов
         output = self.output_conv(spatial_features)
@@ -178,10 +190,10 @@ class ColorizerBackbone(nn.Module):
         
         return {
             'output': output,
-            'swin_features': enhanced_swin,
+            'swin_features': enhanced_swin_2d,
             'vit_features': vit_output,
             'fpn_features': fpn_output,
-            'fused_features': fused_features
+            'fused_features': fusion_output.get("fused_features")
         }
 
 

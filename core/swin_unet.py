@@ -580,7 +580,8 @@ class SwinUNet(nn.Module):
                  window_size=7, mlp_ratio=4., qkv_bias=True, qk_scale=None,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
                  norm_layer=nn.LayerNorm, patch_norm=True,
-                 use_checkpoint=False, final_upsample="expand"):
+                 use_checkpoint=False, final_upsample="expand",
+                 return_intermediate: bool = False):
         super().__init__()
         
         self.img_size = img_size
@@ -591,6 +592,7 @@ class SwinUNet(nn.Module):
         self.embed_dim = embed_dim
         self.patch_norm = patch_norm
         self.final_upsample = final_upsample
+        self.return_intermediate = return_intermediate
         self.mlp_ratio = mlp_ratio
         
         # Преобразование изображения в патчи и embedding
@@ -684,12 +686,22 @@ class SwinUNet(nn.Module):
         x = self.patch_embed(x)
         x = self.pos_drop(x)
         
-        # Сохраняем промежуточные features для skip connections
-        features = []
+        # Сохраняем промежуточные features для skip connections (в векторном виде)
+        features_tokens = []
+        # И так же подготовим 2D feature maps для внешних модулей (FPN/Bridge)
+        features_2d = []
         
         # Энкодер (downsample)
-        for layer in self.layers_down:
-            features.append(x)
+        for i_layer, layer in enumerate(self.layers_down):
+            # Сохраняем токены текущего уровня до даунсемплинга
+            features_tokens.append(x)
+            # Конвертируем в 2D карту признаков и сохраняем
+            H_i = self.patches_resolution[0] // (2 ** i_layer)
+            W_i = self.patches_resolution[1] // (2 ** i_layer)
+            B, L, C = x.shape
+            feat_2d = x.view(B, H_i, W_i, C).permute(0, 3, 1, 2).contiguous()
+            features_2d.append(feat_2d)
+            # Переход к следующему уровню
             x = layer(x)
         
         # Декодер (upsample) с skip connections
@@ -707,13 +719,20 @@ class SwinUNet(nn.Module):
             H = W = int(L ** 0.5)
             x = x.view(B, H, W, C).permute(0, 3, 1, 2).contiguous()
         
-        return x
+        if self.return_intermediate:
+            # Возвращаем 4 уровня признаков (C2..C5) и финальный выход
+            # Нормируем список на 4 элемента (если архитектура изменится)
+            features_2d_out = features_2d[:4]
+            return features_2d_out + [x]
+        else:
+            return x
 
 
 # Функция для создания SwinUNet с предопределенными параметрами
 def create_colorizer_swin_unet(img_size=256, in_chans=1, out_chans=2, embed_dim=96,
                               window_size=8, depths=[2, 2, 8, 2], num_heads=[3, 6, 12, 24],
-                              use_checkpoint=False, final_upsample="expand"):
+                              use_checkpoint=False, final_upsample="expand",
+                              return_intermediate: bool = False):
     """
     Создает Swin-UNet модель для колоризации изображений.
     
@@ -749,7 +768,8 @@ def create_colorizer_swin_unet(img_size=256, in_chans=1, out_chans=2, embed_dim=
         norm_layer=nn.LayerNorm,
         patch_norm=True,
         use_checkpoint=use_checkpoint,
-        final_upsample=final_upsample
+        final_upsample=final_upsample,
+        return_intermediate=return_intermediate
     )
     
     return model
