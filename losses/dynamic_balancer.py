@@ -1127,6 +1127,13 @@ if __name__ == "__main__":
             losses = {
                 'pixel_loss': pixel_loss,
                 'perceptual_loss': perceptual_loss,
+                'gan_loss': gan_loss
+            }
+            
+            # Словарь градиентов (для примера)
+            gradients = {
+                'pixel_loss': torch.rand(1) * 10.0,
+                'perceptual_loss': torch.rand(1) * 5.0,
                 'gan_loss': torch.rand(1) * 2.0
             }
             
