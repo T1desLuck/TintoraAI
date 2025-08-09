@@ -830,6 +830,42 @@ class MotivationalDiscriminator(nn.Module):
         self.reward_count.zero_()
 
 
+# Совместимость: упрощённый алиас с ожидаемой сигнатурой из trainer/scripts
+class Discriminator(MotivationalDiscriminator):
+    """
+    Совместимый класс-обёртка для старого импорта `Discriminator`.
+    Преобразует параметры конструктора в формат `MotivationalDiscriminator`.
+
+    Args:
+        input_nc (int): Кол-во входных каналов (ожидалось в старом коде)
+        ndf (int): Базовое число признаков
+        n_layers (int): Количество слоёв дискриминатора
+        use_spectral_norm (bool): Спектральная нормализация
+        reward_type (str): Тип системы наград (сохраняется для совместимости)
+        device: Игнорируется; устройство задаётся снаружи
+    """
+    def __init__(
+        self,
+        input_nc: int = 3,
+        ndf: int = 64,
+        n_layers: int = 3,
+        use_spectral_norm: bool = True,
+        reward_type: str = "adaptive",
+        device=None,
+    ):
+        # Подбираем разумные значения по умолчанию для отсутствующих в старом API аргументов
+        super().__init__(
+            input_channels=input_nc,
+            ndf=ndf,
+            num_discriminators=3,
+            n_layers=n_layers,
+            use_attention=True,
+            use_spectral_norm=use_spectral_norm,
+            use_semantic=True,
+            use_rewards=True,
+        )
+
+
 def create_motivational_discriminator(config=None):
     """
     Создает экземпляр MotivationalDiscriminator с заданной конфигурацией.

@@ -932,14 +932,14 @@ if __name__ == "__main__":
         else:
             print(f"  {key}: {type(value)}")
 
-# Алиасы для совместимости
-UncertaintyEstimation = UncertaintyEstimationModule  # Для фабричных методов
-UncertaintyEstimator = MCDropoutUncertainty          # Для прямого использования
+# Алиасы для совместимости (в некоторых местах ожидается имя `UncertaintyEstimation`)
+UncertaintyEstimation = UncertaintyEstimationModule
+UncertaintyEstimator = MCDropoutUncertainty
 
 # Экспорт всех важных классов
 __all__ = [
     'UncertaintyEstimationModule',
-    'UncertaintyEstimation',      # алиас
+    'UncertaintyEstimation',
     'MCDropoutUncertainty',
     'ProbabilisticColorizer', 
     'UncertaintyGuidedColorizer',
