@@ -520,7 +520,7 @@ class TestFullModel(unittest.TestCase):
             )
             
             # Создаем постпроцессор
-            postprocessor = ColorizationPostProcessor(
+            postprocessor = ColorizationPostprocessor(
                 color_space='lab',
                 apply_enhancement=False,  # Отключаем улучшение для быстроты тестов
                 device=self.device
