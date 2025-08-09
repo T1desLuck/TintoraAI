@@ -473,9 +473,24 @@ class VGGPerceptualLoss(nn.Module):
         correlation_weight=0.3,
         consistency_weight=0.2,
         content_loss_type='l1',
-        use_adaptive_weights=True
+        use_adaptive_weights=True,
+        layers=None,
+        weights=None,
+        criterion=None,
+        resize=None,
+        normalize=None,
+        device=None,
+        **kwargs,
     ):
         super(VGGPerceptualLoss, self).__init__()
+        
+        # Совместимость: маппинг альтернативных аргументов
+        if layers is not None:
+            feature_layers = layers if isinstance(layers[0], int) else feature_layers
+        if weights is not None:
+            layer_weights = weights
+        if criterion is not None:
+            content_loss_type = criterion
         
         # Инициализируем VGG энкодер
         self.encoder = VGGEncoder(

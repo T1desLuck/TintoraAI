@@ -37,7 +37,7 @@ class GANLoss(nn.Module):
         use_reward_penalty (bool): Использовать ли систему наград и наказаний
     """
     def __init__(self, gan_mode='lsgan', target_real_label=1.0, target_fake_label=0.0, 
-                 label_smoothing=0.1, use_reward_penalty=True):
+                 label_smoothing=0.1, use_reward_penalty=True, device=None, **kwargs):
         super(GANLoss, self).__init__()
         self.gan_mode = gan_mode
         self.register_buffer('real_label', torch.tensor(target_real_label))

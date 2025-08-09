@@ -50,9 +50,16 @@ class PatchNCELoss(nn.Module):
         nce_weight=1.0,
         gradient_weight=0.5,
         use_cosine_similarity=True,
-        normalize_features=True
+        normalize_features=True,
+        n_patches=None,
+        device=None,
+        **kwargs,
     ):
         super(PatchNCELoss, self).__init__()
+        
+        # Совместимость: n_patches как синоним num_patches
+        if n_patches is not None:
+            num_patches = n_patches
         
         self.num_patches = num_patches
         self.patch_size = patch_size
