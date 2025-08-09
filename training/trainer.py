@@ -1415,120 +1415,14 @@ def create_trainer(
 
 def create_model_from_config(config: Dict, device: torch.device) -> nn.Module:
     """
-    Создает модель на основе конфигурации.
-    
-    Args:
-        config (Dict): Конфигурация
-        device (torch.device): Устройство для вычислений
-        
-    Returns:
-        nn.Module: Созданная модель
+    Создает полную модель по конфигу, используя `core.create_colorizer`.
+    Сохраняет архитектуры из ТЗ (Swin-UNet, ViT, FPN, Cross-Attention, Fusion и т.д.).
     """
-    # Получаем конфигурацию модели
-    model_config = config.get('model', {})
-    
-    # Создаем компоненты модели
-    swin_unet_config = model_config.get('swin_unet', {})
-    vit_semantic_config = model_config.get('vit_semantic', {})
-    fpn_pyramid_config = model_config.get('fpn_pyramid', {})
-    cross_attention_config = model_config.get('cross_attention', {})
-    feature_fusion_config = model_config.get('feature_fusion', {})
-    
-    # Создаем основной Swin-UNet
-    swin_unet = SwinUNet(
-        img_size=swin_unet_config.get('img_size', 256),
-        patch_size=swin_unet_config.get('patch_size', 4),
-        in_channels=swin_unet_config.get('in_channels', 1),
-        out_channels=swin_unet_config.get('out_channels', 2),
-        embed_dim=swin_unet_config.get('embed_dim', 96),
-        depths=swin_unet_config.get('depths', [2, 2, 6, 2]),
-        num_heads=swin_unet_config.get('num_heads', [3, 6, 12, 24]),
-        window_size=swin_unet_config.get('window_size', 8),
-        mlp_ratio=swin_unet_config.get('mlp_ratio', 4.0),
-        dropout_rate=swin_unet_config.get('dropout_rate', 0.0),
-        attention_dropout_rate=swin_unet_config.get('attention_dropout_rate', 0.0),
-        return_intermediate=True
-    )
-    
-    # Создаем ViT для семантического понимания
-    vit_semantic = ViTSemantic(
-        img_size=vit_semantic_config.get('img_size', 256),
-        patch_size=vit_semantic_config.get('patch_size', 16),
-        in_channels=vit_semantic_config.get('in_channels', 1),
-        embed_dim=vit_semantic_config.get('embed_dim', 768),
-        depth=vit_semantic_config.get('depth', 12),
-        num_heads=vit_semantic_config.get('num_heads', 12),
-        mlp_ratio=vit_semantic_config.get('mlp_ratio', 4.0),
-        dropout_rate=vit_semantic_config.get('dropout_rate', 0.0)
-    )
-    
-    # Создаем FPN с пирамидальным пулингом
-    fpn = FPNPyramid(
-        in_channels_list=fpn_pyramid_config.get('in_channels_list', [96, 192, 384, 768]),
-        out_channels=fpn_pyramid_config.get('out_channels', 256),
-        use_pyramid_pooling=fpn_pyramid_config.get('use_pyramid_pooling', True)
-    )
-    
-    # Создаем мост Cross-Attention
-    cross_attention = CrossAttentionBridge(
-        swin_dim=cross_attention_config.get('swin_dim', 256),
-        vit_dim=cross_attention_config.get('vit_dim', 768),
-        num_heads=cross_attention_config.get('num_heads', 8),
-        dropout_rate=cross_attention_config.get('dropout_rate', 0.0)
-    )
-    
-    # Создаем модуль слияния признаков
-    feature_fusion = MultiHeadFeatureFusion(
-        in_channels_list=feature_fusion_config.get('in_channels_list', [256, 768]),
-        out_channels=feature_fusion_config.get('out_channels', 512),
-        num_heads=feature_fusion_config.get('num_heads', 8)
-    )
-    
-    # Объединяем все компоненты в полную модель
-    class FullModel(nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.swin_unet = swin_unet
-            self.vit_semantic = vit_semantic
-            self.fpn = fpn
-            self.cross_attention = cross_attention
-            self.feature_fusion = feature_fusion
-            
-            # Финальный слой
-            self.final = nn.Conv2d(feature_fusion_config.get('out_channels', 512), 
-                                   swin_unet_config.get('out_channels', 2), kernel_size=1)
-            
-        def forward(self, x):
-            # Swin-UNet обработка
-            swin_features = self.swin_unet(x)
-            
-            # ViT обработка
-            vit_features = self.vit_semantic(x)
-            
-            # FPN обработка
-            fpn_features = self.fpn(swin_features)
-            
-            # Cross-Attention между FPN и ViT
-            attended_features = self.cross_attention(fpn_features, vit_features)
-            
-            # Слияние признаков
-            fused_features = self.feature_fusion([attended_features, vit_features])
-            
-            # Финальное предсказание
-            output = self.final(fused_features)
-            
-            # Возвращаем результат
-            if swin_unet_config.get('out_channels', 2) == 2:
-                # Возвращаем a и b каналы для пространства LAB
-                return {'a': output[:, 0:1], 'b': output[:, 1:2]}
-            else:
-                # Возвращаем полное изображение
-                return {'colorized': output}
-    
-    # Создаем модель
-    model = FullModel()
+    from core import create_colorizer
+
+    model_cfg = config.get('model', None)
+    model = create_colorizer(model_cfg)
     model.to(device)
-    
     return model
 
 
