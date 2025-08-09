@@ -732,3 +732,20 @@ if __name__ == "__main__":
     
     # Пример применения стиля из словаря
     result = style_transfer.apply_style_transfer(content_image, style_name="vintage", alpha=1.0)
+
+# В самом конце файла modules/style_transfer.py добавьте:
+
+# Алиас для совместимости и удобства использования
+StyleTransfer = StyleTransferModule
+
+# Экспорт основных классов для удобства импорта
+__all__ = [
+    'StyleTransferModule',
+    'StyleTransfer',  # алиас
+    'AdaIN',
+    'ColorTransformNetwork', 
+    'StyleEncoder',
+    'StyleModulator',
+    'ColorHistogramLoss',
+    'create_style_transfer_module'
+]
