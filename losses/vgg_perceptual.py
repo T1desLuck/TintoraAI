@@ -496,7 +496,7 @@ class VGGPerceptualLoss(nn.Module):
         self.encoder = VGGEncoder(
             vgg_type=vgg_type,
             feature_layers=feature_layers,
-            use_pretrained=True,
+            use_pretrained=False,
             requires_grad=False,
             use_input_norm=True
         )
