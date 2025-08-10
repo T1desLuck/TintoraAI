@@ -6,10 +6,10 @@
   <p>Умная колоризация • Стилистические пресеты • Гибкая настройка</p>
 </div>
 
-[![Python Version](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
-![https://pytorch.org](https://img.shields.io/badge/PyTorch-%3E%3D1.9.0-orange)
-![https://github.com/T1desLuck/TintoraAI.git](https://img.shields.io/badge/Версия-1.0.0-green)
-![https://github.com/T1desLuck/TintoraAI/blob/923d65ae9819d8f823e83da2de416fc8c5013ecc/LICENSE](https://img.shields.io/badge/Лицензия-MIT-blue)
+[![Python Version](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-%3E%3D1.9.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Version](https://img.shields.io/badge/Версия-1.0.0-4CAF50?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI.git)
+[![License](https://img.shields.io/badge/Лицензия-MIT-007ACC?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI/blob/a588a27c8a52600bb0cfbf9eff56a0291502f78e/LICENSE)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/USERNAME/REPO/blob/BRANCH/PATH/TO/NOTEBOOK.ipynb)
 ![Repo Size](https://img.shields.io/github/repo-size/T1desLuck/TintoraAI)
 <p align="center">
