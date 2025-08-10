@@ -6,6 +6,8 @@
   <p>Умная колоризация • Стилистические пресеты • Гибкая настройка</p>
 </div>
 
+<p align="center">
+
 [![Python Version](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-%3E%3D1.9.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![Version](https://img.shields.io/badge/Версия-1.0.0-4CAF50?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI.git)
@@ -13,6 +15,8 @@
 [![Open In Colab](https://img.shields.io/badge/Open%20in-Colab-orange?style=for-the-badge&logo=googlecolab&logoColor=white)](https://colab.research.google.com/github/T1desLuck/TintoraAI/blob/main/your_notebook.ipynb)
 [![Repo Size](https://img.shields.io/github/repo-size/T1desLuck/TintoraAI?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI)
 [![CI Status](https://img.shields.io/github/actions/workflow/status/T1desLuck/TintoraAI/python-app.yml?branch=main&style=for-the-badge)](https://github.com/T1desLuck/TintoraAI/actions/workflows/python-app.yml)
+
+</p>
 
 TintoraAI - это современная система для интеллектуальной колоризации черно-белых изображений с использованием передовых методов глубокого обучения. Проект предлагает уникальное сочетание Swin-UNet трансформерной архитектуры, Vision Transformer для семантического понимания изображений, и инновационных модулей, включая систему "наград и наказаний" для реалистичной колоризации.
 
