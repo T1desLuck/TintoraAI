@@ -11,7 +11,7 @@
 ![https://github.com/T1desLuck/TintoraAI.git](https://img.shields.io/badge/Версия-1.0.0-green)
 ![https://github.com/T1desLuck/TintoraAI/blob/923d65ae9819d8f823e83da2de416fc8c5013ecc/LICENSE](https://img.shields.io/badge/Лицензия-MIT-blue)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/USERNAME/REPO/blob/BRANCH/PATH/TO/NOTEBOOK.ipynb)
-![Repo Size](https://img.shields.io/github/repo-size/T1desLuck/TintoraAI)
+![Repo Size](https://img.shields.io/github/Repo-Size/T1desLuck/TintoraAI)
 <p align="center">
   <a href="https://github.com/T1desLuck/TintoraAI/actions/workflows/python-app.yml">
     <img src="https://github.com/T1desLuck/TintoraAI/actions/workflows/python-app.yml/badge.svg" alt="CI Status">
