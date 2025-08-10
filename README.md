@@ -6,7 +6,7 @@
   <p>Умная колоризация • Стилистические пресеты • Гибкая настройка</p>
 </div>
 
-[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
+[![Python Version](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
 ![https://pytorch.org](https://img.shields.io/badge/PyTorch-%3E%3D1.9.0-orange)
 ![https://github.com/T1desLuck/TintoraAI.git](https://img.shields.io/badge/Версия-1.0.0-green)
 ![https://github.com/T1desLuck/TintoraAI/blob/923d65ae9819d8f823e83da2de416fc8c5013ecc/LICENSE](https://img.shields.io/badge/Лицензия-MIT-blue)
