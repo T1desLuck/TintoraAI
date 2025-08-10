@@ -10,7 +10,7 @@
 ![https://pytorch.org](https://img.shields.io/badge/PyTorch-%3E%3D1.9.0-orange)
 ![https://github.com/T1desLuck/TintoraAI.git](https://img.shields.io/badge/Версия-1.0.0-green)
 ![https://github.com/T1desLuck/TintoraAI/blob/923d65ae9819d8f823e83da2de416fc8c5013ecc/LICENSE](https://img.shields.io/badge/Лицензия-MIT-blue)
-![![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/USERNAME/REPO/blob/BRANCH/PATH/TO/NOTEBOOK.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/USERNAME/REPO/blob/BRANCH/PATH/TO/NOTEBOOK.ipynb)
 
 TintoraAI - это современная система для интеллектуальной колоризации черно-белых изображений с использованием передовых методов глубокого обучения. Проект предлагает уникальное сочетание Swin-UNet трансформерной архитектуры, Vision Transformer для семантического понимания изображений, и инновационных модулей, включая систему "наград и наказаний" для реалистичной колоризации.
 
