@@ -183,7 +183,7 @@ style:
 
 ## 📞 Контакты
 - GitHub Issues: https://github.com/T1desLuck/TintoraAI/issues
-- [![Email](https://img.shields.io/badge/Email-tidesluck%40icloud.com-blue)](mailto:tidesluck@icloud.com)
+- [![Email](https://img.shields.io/badge/Email-YourEmail%40domain.com-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:tidesluck@icloud.com)
 
 ## 📄 Лицензия
 Этот проект распространяется под лицензией MIT. См. файл LICENSE для более подробной информации.
