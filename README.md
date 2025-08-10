@@ -25,14 +25,29 @@ TintoraAI - это современная система для интеллек
 - **Передовая архитектура** - Swin-UNet backbone с трансформерами, FPN, Pyramid Pooling и Multi-Head Feature Fusion
 - **Понимание контекста** - ViT семантический блок распознает объекты и контекст для выбора правильных цветов
 
-<div style="border-left: 4px solid #4CAF50; padding: 0.5em 1em; background: #f9f9f9;">
-<strong>🤖 Интеллектуальные модули:</strong><br>
-  🎨 GuideNet - советник по цветам на основе анализа содержимого изображения<br>
-  👁️ GAN Discriminator - оценка реалистичности с системой наград/наказаний<br>
-  🖌️ Style Transfer - применение различных исторических и художественных стилей<br>
-  🧠 Memory Bank - самообучающаяся база знаний о цветовых закономерностях<br>
-  📊 Uncertainty Estimation - оценка уверенности модели в выбранных цветах<br>
-</div>
+<!-- Warning -->
+<table cellpadding="0" cellspacing="0" style="width:100%; margin: 8px 0;">
+  <tr>
+    <!-- левая цветная полоса -->
+    <td style="width:8px; background:#b27a17;"></td>
+
+    <!-- контент -->
+    <td style="padding:12px 16px; background:transparent;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:18px; color:#b27a17; line-height:1;">🤖</span>
+        <strong style="color:#b27a17; font-size:18px;">Интеллектуальные модули</strong>
+      </div>
+
+      <div style="margin-top:8px; color:#222; line-height:1.5;">
+  🎨 **GuideNet** - советник по цветам на основе анализа содержимого изображения<br>
+  👁️ **GAN Discriminator** - оценка реалистичности с системой наград/наказаний<br>
+  🖌️ **Style Transfer** - применение различных исторических и художественных стилей<br>
+  🧠 **Memory Bank** - самообучающаяся база знаний о цветовых закономерностях<br>
+  📊 **Uncertainty Estimation** - оценка уверенности модели в выбранных цветах<br>
+      </div>
+    </td>
+  </tr>
+</table>
 
 - **Удобное использование**:
   - 📱 Интерактивное демо с выбором стилей
