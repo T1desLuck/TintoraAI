@@ -992,7 +992,9 @@ class MemoryBankModule(nn.Module):
     """
     def __init__(self, feature_dim=512, color_channels=2, max_items=100000,
                  index_type='flat', gpu_id=-1, save_dir='./data/memory_bank',
-                 use_fusion=True, k_neighbors=5):
+                 use_fusion=True, k_neighbors=5,
+                 # Альтернативные названия параметров для совместимости с тестами
+                 device=None):
         super(MemoryBankModule, self).__init__()
         
         # Банк памяти

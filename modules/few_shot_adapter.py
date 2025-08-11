@@ -346,7 +346,9 @@ class AdaptableColorizer(nn.Module):
         adapter_config (dict): Конфигурация адаптеров
         prototype_config (dict): Конфигурация прототипической сети
     """
-    def __init__(self, colorizer, adapter_config=None, prototype_config=None):
+    def __init__(self, colorizer, adapter_config=None, prototype_config=None,
+                 # Альтернативные названия параметров для совместимости с тестами
+                 adapter_type=None, device=None):
         super(AdaptableColorizer, self).__init__()
         
         self.colorizer = colorizer

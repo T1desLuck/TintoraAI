@@ -474,8 +474,16 @@ class StyleTransferModule(nn.Module):
         use_histogram_loss (bool): Использовать ли потерю на гистограммах
     """
     def __init__(self, input_channels=3, output_channels=2, style_dim=512, 
-                 use_attention=True, use_histogram_loss=True):
+                 use_attention=True, use_histogram_loss=True,
+                 # Альтернативные названия параметров для совместимости с тестами
+                 in_channels=None, out_channels=None, device=None):
         super(StyleTransferModule, self).__init__()
+        
+        # Совместимость с альтернативными названиями параметров
+        if in_channels is not None:
+            input_channels = in_channels
+        if out_channels is not None:
+            output_channels = out_channels
         
         # Энкодер для извлечения стилевых характеристик
         self.style_encoder = StyleEncoder(
