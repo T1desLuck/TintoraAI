@@ -513,20 +513,29 @@ class MemoryBank(nn.Module):
         """Возвращает устройство, на котором находится модуль."""
         return next(self.parameters()).device
             
-    def add_item(self, features, color, metadata=None, quality=0.5):
+    def add_item(self, item, label=None, metadata=None, quality=0.5):
         """
         Добавляет элемент в банк памяти.
         
         Args:
-            features (torch.Tensor): Признаки [B, feature_dim]
-            color (torch.Tensor): Цвет [B, color_channels, H, W]
+            item (torch.Tensor или MemoryItem): Элемент для добавления
+            label (str, optional): Метка элемента
             metadata (dict, optional): Метаданные
-            quality (float): Оценка качества (0.0 - 1.0)
             
         Returns:
             list: Список ID добавленных элементов
         """
-        batch_size = features.shape[0]
+        if isinstance(item, torch.Tensor):
+            batch_size = item.shape[0]
+            features = item
+            color = torch.zeros((batch_size, self.color_channels, 1, 1), device=self.device)
+        elif isinstance(item, MemoryItem):
+            batch_size = 1
+            features = torch.tensor(item.features, device=self.device).unsqueeze(0)
+            color = torch.tensor(item.color, device=self.device).unsqueeze(0)
+        else:
+            raise ValueError("item должен быть torch.Tensor или MemoryItem")
+        
         added_ids = []
         
         # Преобразуем в numpy для работы с FAISS

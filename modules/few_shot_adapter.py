@@ -342,17 +342,27 @@ class AdaptableColorizer(nn.Module):
     Адаптируемый колоризатор с поддержкой few-shot обучения.
     
     Args:
-        colorizer (nn.Module): Базовая модель колоризации
-        adapter_config (dict): Конфигурация адаптеров
-        prototype_config (dict): Конфигурация прототипической сети
+        base_colorizer (nn.Module): Базовая модель колоризации
+        adaptation_method (str): Метод адаптации (meta_learning или fine_tuning)
+        num_support_samples (int): Количество поддерживающих примеров для адаптации
+        learning_rate (float): Скорость обучения для адаптации
+        num_adaptation_steps (int): Количество шагов адаптации
+        use_attention (bool): Использовать ли механизм внимания
+        use_prototype_matching (bool): Использовать ли сопоставление прототипов
+        bottleneck_dim (int): Размерность бутыллочного горлышка для адаптеров
     """
-    def __init__(self, colorizer, adapter_config=None, prototype_config=None,
-                 # Альтернативные названия параметров для совместимости с тестами
-                 adapter_type=None, device=None, bottleneck_dim=64):
+    def __init__(self, base_colorizer, adaptation_method='meta_learning', 
+                 num_support_samples=5, learning_rate=0.001, num_adaptation_steps=10,
+                 use_attention=True, use_prototype_matching=True,
+                 # Альтернативные параметры для совместимости с тестами
+                 bottleneck_dim=None, base_model=None, **kwargs):
         super(AdaptableColorizer, self).__init__()
         
-        self.colorizer = colorizer
-        self.bottleneck_dim = bottleneck_dim
+        # Совместимость с альтернативными параметрами
+        if base_model is not None:
+            base_colorizer = base_model
+        self.colorizer = base_colorizer
+        self.bottleneck_dim = bottleneck_dim if bottleneck_dim is not None else 64
         
         # Конфигурация по умолчанию для адаптеров
         if adapter_config is None:

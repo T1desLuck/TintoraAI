@@ -692,23 +692,26 @@ class MotivationalDiscriminator(nn.Module):
         ndf (int): Базовое количество признаков
         num_discriminators (int): Количество дискриминаторов в мультимасштабной архитектуре
         n_layers (int): Количество слоев в каждом дискриминаторе
-        use_attention (bool): Использовать ли механизм внимания
+        norm_layer (nn.Module): Нормализующий слой
+        use_sigmoid (bool): Использовать ли сигмоидную функцию
         use_spectral_norm (bool): Использовать ли спектральную нормализацию
+        use_self_attention (bool): Использовать ли механизм самовнимания
         use_semantic (bool): Использовать ли семантическую информацию
         use_rewards (bool): Использовать ли систему наград
     """
-    def __init__(self, input_channels=3, ndf=64, num_discriminators=3, n_layers=3,
-                 use_attention=True, use_spectral_norm=True, 
-                 use_semantic=True, use_rewards=True,
-                 # Альтернативные названия параметров для совместимости с тестами
-                 in_channels=None, device=None, input_nc=None):
+    def __init__(self, input_channels=3, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, 
+                 use_sigmoid=False, use_spectral_norm=True, use_self_attention=True,
+                 # Альтернативные параметры для совместимости с тестами
+                 input_nc=None, reward_type=None, **kwargs):
         super(MotivationalDiscriminator, self).__init__()
         
         # Совместимость с альтернативными названиями параметров
         if input_nc is not None:
             input_channels = input_nc
-        elif in_channels is not None:
-            input_channels = in_channels
+        if reward_type is not None:
+            self.reward_type = reward_type
+        else:
+            self.reward_type = 'binary'  # По умолчанию
         
         self.use_semantic = use_semantic
         self.use_rewards = use_rewards

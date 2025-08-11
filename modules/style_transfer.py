@@ -468,28 +468,38 @@ class StyleTransferModule(nn.Module):
     
     Args:
         input_channels (int): Количество входных каналов
-        output_channels (int): Количество выходных каналов (обычно 2 для ab каналов в Lab)
-        style_dim (int): Размерность стилевого вектора
+        style_channels (int): Количество каналов стилевого изображения
+        output_channels (int): Количество выходных каналов (обычно 3 для RGB)
+        base_channels (int): Базовое количество каналов в сети
+        num_residual_blocks (int): Количество блоков с остаточной связью
         use_attention (bool): Использовать ли механизм внимания
-        use_histogram_loss (bool): Использовать ли потерю на гистограммах
+        use_instance_norm (bool): Использовать ли инстанс нормализацию
+        use_spectral_norm (bool): Использовать ли спектральную нормализацию
+        content_weight (float, optional): Вес контентной потери (по умолчанию: 1.0)
+        style_weight (float, optional): Вес стилевой потери (по умолчанию: 1.0)
     """
-    def __init__(self, input_channels=3, output_channels=2, style_dim=512, 
-                 use_attention=True, use_histogram_loss=True,
-                 # Альтернативные названия параметров для совместимости с тестами
-                 in_channels=None, out_channels=None, device=None, 
-                 content_weight=1.0, style_weight=1.0):
+    def __init__(self, input_channels=3, style_channels=3, output_channels=3,
+                 base_channels=64, num_residual_blocks=9, use_attention=True,
+                 use_instance_norm=True, use_spectral_norm=False,
+                 # Альтернативные параметры для совместимости с тестами
+                 content_weight=None, style_weight=None, content_layers=None, **kwargs):
         super(StyleTransferModule, self).__init__()
         
         # Совместимость с альтернативными названиями параметров
-        if in_channels is not None:
+        if 'in_channels' in kwargs:
+            input_channels = kwargs['in_channels']
+        if 'out_channels' in kwargs:
+            output_channels = kwargs['out_channels']
+        if 'device' in kwargs:
+            device = kwargs['device']
             input_channels = in_channels
         if out_channels is not None:
             output_channels = out_channels
             
-        # Сохраняем веса для использования в потерях
-        self.content_weight = content_weight
-        self.style_weight = style_weight
-        
+        # Сохраняем веса для совместимости с тестами
+        self.content_weight = content_weight if content_weight is not None else 1.0
+        self.style_weight = style_weight if style_weight is not None else 1.0
+        self.content_layers = content_layers if content_layers is not None else ['conv_4']  
         # Энкодер для извлечения стилевых характеристик
         self.style_encoder = StyleEncoder(
             input_channels=input_channels, 

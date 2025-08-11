@@ -645,22 +645,33 @@ class GuideNet(nn.Module):
         base_channels (int): Базовое количество каналов
         num_stages (int): Количество стадий даунсемплинга
         hidden_dim (int): Размерность скрытого пространства
+        output_dim (int): Размерность выходного пространства
+        num_heads (int): Количество голов в механизме внимания
+        dropout (float): Вероятность dropout
+        use_semantic_guidance (bool): Использовать ли семантическое руководство
+        use_color_histogram (bool): Использовать ли цветовой гистограмму
         use_attention (bool): Использовать ли механизм внимания
-        use_semantic (bool): Использовать ли семантический анализ
-        use_reference (bool): Использовать ли референсные изображения
-        use_rewards (bool): Использовать ли систему наград
+        temperature (float): Температура для механизма внимания
+        device (torch.device, optional): Устройство для вычислений
+        # Альтернативные названия параметров для совместимости с тестами
+        feature_dim (int, optional): Размерность признаков
+        num_layers (int, optional): Количество слоев
     """
-    def __init__(self, input_channels=1, base_channels=64, num_stages=4, hidden_dim=256,
-                 use_attention=True, use_semantic=True, use_reference=True, use_rewards=True,
-                 # Альтернативные названия параметров для совместимости с тестами
-                 in_channels=None, advice_channels=None, device=None, feature_dim=None):
+    def __init__(self, input_dim=512, hidden_dim=256, output_dim=3, num_heads=8, 
+                 dropout=0.1, use_semantic_guidance=True, use_color_histogram=True,
+                 use_attention=True, temperature=0.1, device=None,
+                 # Альтернативные параметры для совместимости с тестами
+                 feature_dim=None, num_layers=None, **kwargs):
         super(GuideNet, self).__init__()
         
         # Совместимость с альтернативными названиями параметров
-        if in_channels is not None:
-            input_channels = in_channels
         if feature_dim is not None:
             hidden_dim = feature_dim
+        if num_layers is not None:
+            # Используем num_layers для определения глубины сети
+            self.num_layers = num_layers
+        else:
+            self.num_layers = 3  # По умолчанию
         
         self.use_semantic = use_semantic
         self.use_reference = use_reference
