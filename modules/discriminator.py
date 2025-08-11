@@ -701,6 +701,7 @@ class MotivationalDiscriminator(nn.Module):
     """
     def __init__(self, input_channels=3, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, 
                  use_sigmoid=False, use_spectral_norm=True, use_self_attention=True,
+                 use_semantic=True, use_rewards=True, num_discriminators=3, use_attention=True,
                  # Альтернативные параметры для совместимости с тестами
                  input_nc=None, reward_type=None, **kwargs):
         super(MotivationalDiscriminator, self).__init__()

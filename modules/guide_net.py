@@ -660,6 +660,9 @@ class GuideNet(nn.Module):
     def __init__(self, input_dim=512, hidden_dim=256, output_dim=3, num_heads=8, 
                  dropout=0.1, use_semantic_guidance=True, use_color_histogram=True,
                  use_attention=True, temperature=0.1, device=None,
+                 # Дополнительные параметры для совместимости
+                 input_channels=1, base_channels=64, num_stages=4, 
+                 use_semantic=True, use_reference=True, use_rewards=True,
                  # Альтернативные параметры для совместимости с тестами
                  feature_dim=None, num_layers=None, **kwargs):
         super(GuideNet, self).__init__()

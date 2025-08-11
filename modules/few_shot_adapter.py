@@ -354,6 +354,8 @@ class AdaptableColorizer(nn.Module):
     def __init__(self, base_colorizer, adaptation_method='meta_learning', 
                  num_support_samples=5, learning_rate=0.001, num_adaptation_steps=10,
                  use_attention=True, use_prototype_matching=True,
+                 # Дополнительные параметры для совместимости
+                 adapter_config=None, prototype_config=None,
                  # Альтернативные параметры для совместимости с тестами
                  bottleneck_dim=None, base_model=None, **kwargs):
         super(AdaptableColorizer, self).__init__()

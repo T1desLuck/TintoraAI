@@ -481,6 +481,8 @@ class StyleTransferModule(nn.Module):
     def __init__(self, input_channels=3, style_channels=3, output_channels=3,
                  base_channels=64, num_residual_blocks=9, use_attention=True,
                  use_instance_norm=True, use_spectral_norm=False,
+                 # Дополнительные параметры для совместимости
+                 style_dim=512, use_histogram_loss=True,
                  # Альтернативные параметры для совместимости с тестами
                  content_weight=None, style_weight=None, content_layers=None, **kwargs):
         super(StyleTransferModule, self).__init__()
@@ -492,9 +494,6 @@ class StyleTransferModule(nn.Module):
             output_channels = kwargs['out_channels']
         if 'device' in kwargs:
             device = kwargs['device']
-            input_channels = in_channels
-        if out_channels is not None:
-            output_channels = out_channels
             
         # Сохраняем веса для совместимости с тестами
         self.content_weight = content_weight if content_weight is not None else 1.0
