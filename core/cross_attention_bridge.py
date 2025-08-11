@@ -64,6 +64,16 @@ class FeatureAlignment(nn.Module):
         Returns:
             tuple: Выровненные признаки (aligned_swin, aligned_vit)
         """
+        # Поддержка входов как последовательностей [B, N, C] и как карт [B, C, H, W]
+        if swin_features.dim() == 4:  # [B, C, H, W] -> [B, N, C]
+            B, C_s, H_s, W_s = swin_features.shape
+            swin_resolution = (H_s, W_s) if swin_resolution is None else swin_resolution
+            swin_features = rearrange(swin_features, 'b c h w -> b (h w) c')
+        if vit_features.dim() == 4:  # [B, C, H, W] -> [B, N, C]
+            B, C_v, H_v, W_v = vit_features.shape
+            vit_resolution = (H_v, W_v) if vit_resolution is None else vit_resolution
+            vit_features = rearrange(vit_features, 'b c h w -> b (h w) c')
+
         B, N_swin, _ = swin_features.shape
         _, N_vit, _ = vit_features.shape
         

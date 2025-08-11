@@ -502,9 +502,11 @@ class MultiHeadFeatureFusion(nn.Module):
         super().__init__()
         
         # Совместимость с альтернативными параметрами
+        self.spatial_mode = False
         if in_channels_list is not None:
             # Преобразуем список каналов в словарь
             input_dims = {f"source_{i}": dim for i, dim in enumerate(in_channels_list)}
+            self.spatial_mode = True
         
         if out_channels is not None:
             fusion_dim = out_channels
@@ -518,14 +520,29 @@ class MultiHeadFeatureFusion(nn.Module):
         self.sources = list(input_dims.keys())
         self.fusion_method = fusion_method
         
-        # Проекции для приведения всех признаков к одной размерности
-        self.projections = nn.ModuleDict({
-            source: nn.Sequential(
-                nn.Linear(dim, fusion_dim),
-                nn.LayerNorm(fusion_dim),
-                nn.Dropout(dropout)
-            ) for source, dim in input_dims.items()
-        })
+        if not self.spatial_mode:
+            # Проекции последовательностей [B, L, C]
+            self.projections = nn.ModuleDict({
+                source: nn.Sequential(
+                    nn.Linear(dim, fusion_dim),
+                    nn.LayerNorm(fusion_dim),
+                    nn.Dropout(dropout)
+                ) for source, dim in input_dims.items()
+            })
+        else:
+            # Проекции для 2D карт [B, C, H, W]
+            self.spatial_projections = nn.ModuleList([
+                nn.Conv2d(ch, fusion_dim, kernel_size=1, bias=False)
+                for ch in in_channels_list
+            ])
+            # Слияние конкатенированных карт в fusion_dim
+            self.spatial_fuse = nn.Sequential(
+                nn.Conv2d(fusion_dim * len(in_channels_list), fusion_dim, kernel_size=1, bias=False),
+                nn.BatchNorm2d(fusion_dim),
+                nn.ReLU(inplace=True)
+            )
+            # Небольшое уточнение признаков
+            self.spatial_refine = FeatureRefinementBlock(fusion_dim, fusion_dim, use_attention=True)
         
         # Кросс-модальное внимание между разными источниками
         self.cross_attentions = nn.ModuleDict({
@@ -535,17 +552,17 @@ class MultiHeadFeatureFusion(nn.Module):
             if i < j  # Только уникальные пары
         })
         
-        # Методы слияния признаков
-        if fusion_method == "attention":
+        # Методы слияния признаков (только для последовательностей)
+        if not self.spatial_mode and fusion_method == "attention":
             # Многоголовочное внимание для слияния
             self.fusion_module = MultiHeadCrossAttention(fusion_dim, num_heads, dropout)
-        elif fusion_method == "routing":
+        elif not self.spatial_mode and fusion_method == "routing":
             # Динамическая маршрутизация
             self.fusion_module = DynamicRouting(fusion_dim, len(input_dims), num_iterations=3)
-        elif fusion_method == "adaptive":
+        elif not self.spatial_mode and fusion_method == "adaptive":
             # Адаптивное взвешивание
             self.fusion_module = AdaptiveFeatureWeighting(fusion_dim, len(input_dims), reduction_ratio=8)
-        elif fusion_method == "concat":
+        elif not self.spatial_mode and fusion_method == "concat":
             # Конкатенация с последующей проекцией
             self.fusion_module = nn.Sequential(
                 nn.Linear(fusion_dim * len(input_dims), fusion_dim),
@@ -554,18 +571,18 @@ class MultiHeadFeatureFusion(nn.Module):
                 nn.Dropout(dropout)
             )
             
-        # Финальное уточнение признаков
-        self.feature_refinement = nn.Sequential(
-            nn.Linear(fusion_dim, fusion_dim),
-            nn.LayerNorm(fusion_dim),
-            nn.ReLU(inplace=True),
-            nn.Dropout(dropout),
-            nn.Linear(fusion_dim, fusion_dim),
-            nn.LayerNorm(fusion_dim)
-        )
-        
-        # Выходная проекция в зависимости от задачи
-        self.output_projection = nn.Linear(fusion_dim, fusion_dim)
+        if not self.spatial_mode:
+            # Финальное уточнение признаков (последовательности)
+            self.feature_refinement = nn.Sequential(
+                nn.Linear(fusion_dim, fusion_dim),
+                nn.LayerNorm(fusion_dim),
+                nn.ReLU(inplace=True),
+                nn.Dropout(dropout),
+                nn.Linear(fusion_dim, fusion_dim),
+                nn.LayerNorm(fusion_dim)
+            )
+            # Выходная проекция
+            self.output_projection = nn.Linear(fusion_dim, fusion_dim)
             
     def forward(self, feature_dict):
         """
@@ -581,7 +598,19 @@ class MultiHeadFeatureFusion(nn.Module):
                 "attention_weights": dict        # Веса внимания (при использовании attention)
             }
         """
-        # Конвертируем список в словарь для совместимости с тестами
+        # Пространственный режим: вход — список карт признаков [B, C, H, W]
+        if self.spatial_mode and isinstance(feature_dict, list):
+            assert len(feature_dict) == len(self.spatial_projections)
+            # Проекции 1x1 conv к общей размерности
+            projected = [proj(feat) for proj, feat in zip(self.spatial_projections, feature_dict)]
+            # Конкатенация и 1x1 слияние
+            fused = torch.cat(projected, dim=1)
+            fused = self.spatial_fuse(fused)
+            # Уточнение
+            fused = self.spatial_refine(fused)
+            return fused
+        
+        # Конвертируем список в словарь для режима последовательностей
         if isinstance(feature_dict, list):
             feature_dict = {f"source_{i}": tensor for i, tensor in enumerate(feature_dict)}
         
