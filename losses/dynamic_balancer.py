@@ -952,20 +952,26 @@ class DynamicLossBalancer(nn.Module):
         use_loss_uncertainty (bool): Использовать ли неопределенность потерь
         device (torch.device): Устройство для тензоров
     """
-    def __init__(self, loss_names, initial_weights=None, strategy='adaptive',
+    def __init__(self, loss_names=None, initial_weights=None, strategy='adaptive',
                  scheduler_type='cosine', total_epochs=200, adaptive_strategy='hybrid',
                  min_weight_ratio=0.1, use_loss_uncertainty=True, device=None,
                  # Альтернативные параметры для совместимости с тестами
                  num_losses=None, balancing_strategy=None, **kwargs):
         super(DynamicLossBalancer, self).__init__()
         
-        # Совместимость с альтернативными параметрами
+        # Альтернативные параметры для совместимости с тестами
+        if num_losses is not None:
+            if loss_names is None:
+                loss_names = [f'loss_{i}' for i in range(num_losses)]
         if balancing_strategy is not None:
             strategy = balancing_strategy
-        if num_losses is not None and loss_names is None:
-            loss_names = [f'loss_{i}' for i in range(num_losses)]
-        
+            
+        # Автоматическое определение loss_names если не задано
+        if loss_names is None:
+            loss_names = ['nce_loss', 'perceptual_loss', 'gan_loss', 'consistency_loss']
+            
         self.strategy = strategy
+            
         self.loss_names = loss_names
         self.num_losses = len(loss_names)
         

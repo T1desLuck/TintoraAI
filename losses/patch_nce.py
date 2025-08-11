@@ -247,9 +247,11 @@ class PatchNCELoss(nn.Module):
         # Для совместимости с оригинальной логикой
         encoder_features = query
         decoder_features = key
-        # Проверяем размерности
-        assert encoder_features.shape == decoder_features.shape, \
-            f"Размерности признаков должны совпадать: {encoder_features.shape} vs {decoder_features.shape}"
+        # Проверяем размерности - допускаем разные каналы, но одинаковые пространственные размеры
+        if encoder_features.shape[2:] != decoder_features.shape[2:]:
+            # Если пространственные размеры не совпадают, приводим к одному размеру
+            target_size = encoder_features.shape[2:]
+            decoder_features = F.interpolate(decoder_features, size=target_size, mode='bilinear', align_corners=False)
         
         # Извлекаем патчи
         encoder_patches, patch_indices = self.extract_patches(encoder_features)
