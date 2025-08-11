@@ -232,22 +232,21 @@ class PatchNCELoss(nn.Module):
         
         return avg_sim
     
-    def forward(self, encoder_features, decoder_features):
+    def forward(self, query, key, reference=None):
         """
         Прямое распространение для вычисления PatchNCE потери.
         
         Args:
-            encoder_features (torch.Tensor): Признаки из энкодера [B, C, H, W]
-            decoder_features (torch.Tensor): Признаки из декодера [B, C, H, W]
+            query (torch.Tensor): Запрос (обычно из энкодера) [B, C, H, W]
+            key (torch.Tensor): Ключ (обычно из декодера) [B, C, H, W]  
+            reference (torch.Tensor, optional): Референс для дополнительного контроля [B, C, H, W]
             
         Returns:
-            dict: Словарь с потерями и метриками {
-                'total_loss': общая потеря,
-                'nce_loss': контрастная потеря,
-                'gradient_loss': градиентная потеря,
-                'avg_positive_similarity': среднее сходство положительных пар
-            }
+            torch.Tensor: Значение потери (для совместимости с тестами)
         """
+        # Для совместимости с оригинальной логикой
+        encoder_features = query
+        decoder_features = key
         # Проверяем размерности
         assert encoder_features.shape == decoder_features.shape, \
             f"Размерности признаков должны совпадать: {encoder_features.shape} vs {decoder_features.shape}"
@@ -272,12 +271,8 @@ class PatchNCELoss(nn.Module):
         # Получаем среднее сходство положительных пар
         avg_positive_sim = self.get_average_positive_similarity()
         
-        return {
-            'total_loss': total_loss,
-            'nce_loss': nce_loss,
-            'gradient_loss': gradient_loss,
-            'avg_positive_similarity': avg_positive_sim
-        }
+        # Возвращаем только total_loss для совместимости с тестами
+        return total_loss
 
 
 class PatchSampler(nn.Module):

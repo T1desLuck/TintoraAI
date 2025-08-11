@@ -150,19 +150,22 @@ class VGGEncoder(nn.Module):
         """
         # Нормализуем входные данные, если требуется
         if self.use_input_norm:
-            # Если вход в Lab пространстве, преобразуем его в RGB
-            if x.size(1) == 3:  # Предполагаем, что уже в RGB или Lab
+            # Проверяем, является ли вход изображением (1 или 3 канала) или уже признаками
+            if x.size(1) == 3:  # RGB изображение
                 if hasattr(self, 'is_lab') and self.is_lab:
                     # Преобразуем из Lab в RGB (упрощенно)
-                    # Это очень упрощенное преобразование, для точности нужна специальная функция
                     x = (x + 1) / 2  # Нормализуем в [0, 1]
                 
                 # Нормализуем по средним и стандартным отклонениям ImageNet
                 x = (x - self.mean) / self.std
-            else:
+            elif x.size(1) == 1:  # Черно-белое изображение
                 # Для черно-белых изображений повторяем канал трижды
                 x = x.repeat(1, 3, 1, 1)
                 x = (x - self.mean) / self.std
+            else:
+                # Если количество каналов не 1 или 3, предполагаем, что это уже признаки
+                # В этом случае не применяем нормализацию ImageNet
+                pass
         
         # Извлекаем признаки для каждого уровня
         features = {}
@@ -531,6 +534,18 @@ class VGGPerceptualLoss(nn.Module):
         
         # Флаг для адаптивных весов
         self.use_adaptive_weights = use_adaptive_weights
+    
+    def get_features(self, x):
+        """
+        Извлекает признаки из VGG энкодера (для совместимости с тестами).
+        
+        Args:
+            x (torch.Tensor): Входное изображение [B, C, H, W]
+            
+        Returns:
+            dict: Словарь с признаками для каждого уровня
+        """
+        return self.encoder(x)
         
     def get_normalized_weights(self):
         """

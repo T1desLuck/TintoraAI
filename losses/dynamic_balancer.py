@@ -954,8 +954,16 @@ class DynamicLossBalancer(nn.Module):
     """
     def __init__(self, loss_names, initial_weights=None, strategy='adaptive',
                  scheduler_type='cosine', total_epochs=200, adaptive_strategy='hybrid',
-                 min_weight_ratio=0.1, use_loss_uncertainty=True, device=None):
+                 min_weight_ratio=0.1, use_loss_uncertainty=True, device=None,
+                 # Альтернативные параметры для совместимости с тестами
+                 num_losses=None, balancing_strategy=None, **kwargs):
         super(DynamicLossBalancer, self).__init__()
+        
+        # Совместимость с альтернативными параметрами
+        if balancing_strategy is not None:
+            strategy = balancing_strategy
+        if num_losses is not None and loss_names is None:
+            loss_names = [f'loss_{i}' for i in range(num_losses)]
         
         self.strategy = strategy
         self.loss_names = loss_names
