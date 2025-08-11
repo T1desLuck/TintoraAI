@@ -1010,19 +1010,6 @@ class MemoryBankModule(nn.Module):
         # Для совместимости с тестами
         self.memory_items = []
     
-    def add_item(self, item):
-        """
-        Добавляет элемент в банк памяти (для совместимости с тестами).
-        
-        Args:
-            item: Элемент для добавления
-            
-        Returns:
-            bool: True если элемент добавлен успешно
-        """
-        self.memory_items.append(item)
-        return True
-        
         # Энкодер для извлечения признаков из цветных изображений
         self.color_encoder = ColorEncoder(
             input_channels=color_channels + 1,  # L + ab
@@ -1058,6 +1045,19 @@ class MemoryBankModule(nn.Module):
         self.register_buffer('memory_miss_count', torch.zeros(1, dtype=torch.long))
         self.register_buffer('fusion_quality_sum', torch.zeros(1))
         self.register_buffer('fusion_count', torch.zeros(1, dtype=torch.long))
+    
+    def add_item(self, item):
+        """
+        Добавляет элемент в банк памяти (для совместимости с тестами).
+        
+        Args:
+            item: Элемент для добавления
+            
+        Returns:
+            bool: True если элемент добавлен успешно
+        """
+        self.memory_items.append(item)
+        return True
         
     def encode_image(self, gray_image, color_image=None):
         """
