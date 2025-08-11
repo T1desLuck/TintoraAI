@@ -653,12 +653,14 @@ class GuideNet(nn.Module):
     def __init__(self, input_channels=1, base_channels=64, num_stages=4, hidden_dim=256,
                  use_attention=True, use_semantic=True, use_reference=True, use_rewards=True,
                  # Альтернативные названия параметров для совместимости с тестами
-                 in_channels=None, advice_channels=None, device=None):
+                 in_channels=None, advice_channels=None, device=None, feature_dim=None):
         super(GuideNet, self).__init__()
         
         # Совместимость с альтернативными названиями параметров
         if in_channels is not None:
             input_channels = in_channels
+        if feature_dim is not None:
+            hidden_dim = feature_dim
         
         self.use_semantic = use_semantic
         self.use_reference = use_reference

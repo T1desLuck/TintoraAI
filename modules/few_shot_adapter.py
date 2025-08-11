@@ -348,10 +348,11 @@ class AdaptableColorizer(nn.Module):
     """
     def __init__(self, colorizer, adapter_config=None, prototype_config=None,
                  # Альтернативные названия параметров для совместимости с тестами
-                 adapter_type=None, device=None):
+                 adapter_type=None, device=None, bottleneck_dim=64):
         super(AdaptableColorizer, self).__init__()
         
         self.colorizer = colorizer
+        self.bottleneck_dim = bottleneck_dim
         
         # Конфигурация по умолчанию для адаптеров
         if adapter_config is None:

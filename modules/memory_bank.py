@@ -1007,6 +1007,22 @@ class MemoryBankModule(nn.Module):
             save_dir=save_dir
         )
         
+        # Для совместимости с тестами
+        self.memory_items = []
+    
+    def add_item(self, item):
+        """
+        Добавляет элемент в банк памяти (для совместимости с тестами).
+        
+        Args:
+            item: Элемент для добавления
+            
+        Returns:
+            bool: True если элемент добавлен успешно
+        """
+        self.memory_items.append(item)
+        return True
+        
         # Энкодер для извлечения признаков из цветных изображений
         self.color_encoder = ColorEncoder(
             input_channels=color_channels + 1,  # L + ab

@@ -701,11 +701,13 @@ class MotivationalDiscriminator(nn.Module):
                  use_attention=True, use_spectral_norm=True, 
                  use_semantic=True, use_rewards=True,
                  # Альтернативные названия параметров для совместимости с тестами
-                 in_channels=None, device=None):
+                 in_channels=None, device=None, input_nc=None):
         super(MotivationalDiscriminator, self).__init__()
         
         # Совместимость с альтернативными названиями параметров
-        if in_channels is not None:
+        if input_nc is not None:
+            input_channels = input_nc
+        elif in_channels is not None:
             input_channels = in_channels
         
         self.use_semantic = use_semantic

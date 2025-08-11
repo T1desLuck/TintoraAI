@@ -756,10 +756,17 @@ class UncertaintyVisualization:
         return torch.stack(variants, dim=0)
 
 
-class UncertaintyEstimationModule:
+class UncertaintyEstimationModule(nn.Module):
     """
     Модуль для интеграции оценки неопределенности в колоризатор.
     """
+    def __init__(self, colorizer=None, num_samples=10, dropout_rate=0.1, dropout_layers=None):
+        super().__init__()
+        self.colorizer = colorizer
+        self.num_samples = num_samples
+        self.dropout_rate = dropout_rate
+        self.dropout_layers = dropout_layers
+    
     @staticmethod
     def create_mc_dropout_estimator(colorizer, num_samples=10, dropout_rate=0.1, dropout_layers=None):
         """

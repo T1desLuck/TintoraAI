@@ -476,7 +476,8 @@ class StyleTransferModule(nn.Module):
     def __init__(self, input_channels=3, output_channels=2, style_dim=512, 
                  use_attention=True, use_histogram_loss=True,
                  # Альтернативные названия параметров для совместимости с тестами
-                 in_channels=None, out_channels=None, device=None):
+                 in_channels=None, out_channels=None, device=None, 
+                 content_weight=1.0, style_weight=1.0):
         super(StyleTransferModule, self).__init__()
         
         # Совместимость с альтернативными названиями параметров
@@ -484,6 +485,10 @@ class StyleTransferModule(nn.Module):
             input_channels = in_channels
         if out_channels is not None:
             output_channels = out_channels
+            
+        # Сохраняем веса для использования в потерях
+        self.content_weight = content_weight
+        self.style_weight = style_weight
         
         # Энкодер для извлечения стилевых характеристик
         self.style_encoder = StyleEncoder(
