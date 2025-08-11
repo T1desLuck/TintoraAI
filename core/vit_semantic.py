@@ -379,8 +379,15 @@ class ViTSemantic(nn.Module):
     def __init__(self, img_size=224, patch_size=16, in_chans=1, embed_dim=768,
                  depth=12, num_heads=12, mlp_ratio=4., qkv_bias=True, qk_scale=None,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0., norm_layer=nn.LayerNorm,
-                 semantic_dim=256, use_cls_token=True):
+                 semantic_dim=256, use_cls_token=True,
+                 # Альтернативные названия параметров для совместимости с тестами
+                 in_channels=None):
         super().__init__()
+        
+        # Совместимость с альтернативными названиями параметров
+        if in_channels is not None:
+            in_chans = in_channels
+            
         self.num_features = self.embed_dim = embed_dim
         self.use_cls_token = use_cls_token
         

@@ -581,8 +581,16 @@ class SwinUNet(nn.Module):
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
                  norm_layer=nn.LayerNorm, patch_norm=True,
                  use_checkpoint=False, final_upsample="expand",
-                 return_intermediate: bool = False):
+                 return_intermediate: bool = False,
+                 # Альтернативные названия параметров для совместимости с тестами
+                 in_channels=None, out_channels=None):
         super().__init__()
+        
+        # Совместимость с альтернативными названиями параметров
+        if in_channels is not None:
+            in_chans = in_channels
+        if out_channels is not None:
+            out_chans = out_channels
         
         self.img_size = img_size
         self.patch_size = patch_size
