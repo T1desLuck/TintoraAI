@@ -559,20 +559,16 @@ class ViTSemantic(nn.Module):
         
         return enriched_features, semantic_features
     
-    def forward(self, x):
+    def forward(self, x, return_dict=False):
         """
-        Полное прямое распространение через ViT Semantic.
+        Прямое распространение через ViT Semantic модель.
         
         Args:
             x (torch.Tensor): Входное изображение [B, C, H, W]
+            return_dict (bool): Если True, возвращает dict, иначе tensor
             
         Returns:
-            dict: {
-                'enriched_features': torch.Tensor,  # Обогащенные контекстом признаки
-                'semantic_features': torch.Tensor,  # Семантические признаки
-                'patch_tokens': torch.Tensor,       # Исходные токены патчей
-                'cls_token': torch.Tensor          # CLS токен или усредненный токен
-            }
+            torch.Tensor или dict: В зависимости от return_dict
         """
         # Извлечение признаков
         patch_tokens, cls_token = self.forward_features(x)
@@ -580,12 +576,18 @@ class ViTSemantic(nn.Module):
         # Создание семантических признаков и обогащение контекстом
         enriched_features, semantic_features = self.forward_semantic(patch_tokens, cls_token)
         
-        return {
-            'enriched_features': enriched_features,
-            'semantic_features': semantic_features,
-            'patch_tokens': patch_tokens,
-            'cls_token': cls_token
-        }
+        if return_dict:
+            return {
+                'enriched_features': enriched_features,
+                'semantic_features': semantic_features,
+                'patch_tokens': patch_tokens,
+                'cls_token': cls_token
+            }
+        else:
+            # Возвращаем обогащенные признаки как основной выход для совместимости с тестами
+            B, num_patches, embed_dim = enriched_features.shape
+            H = W = int(num_patches ** 0.5)
+            return enriched_features.transpose(1, 2).view(B, embed_dim, H, W)
 
 
 def create_vit_semantic(img_size=256, patch_size=16, in_chans=1, embed_dim=768,

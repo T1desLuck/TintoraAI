@@ -271,16 +271,30 @@ class CrossAttentionBridge(nn.Module):
     """
     def __init__(
         self, 
-        swin_dims, 
-        vit_dim, 
+        swin_dims=None, 
+        vit_dim=None, 
         fusion_dim=512, 
         num_heads=8, 
         mlp_ratio=4., 
         drop_path=0.,
         norm_layer=nn.LayerNorm,
-        use_multi_level=True
+        use_multi_level=True,
+        # Альтернативные параметры для совместимости с тестами
+        swin_dim=None
     ):
         super().__init__()
+        
+        # Совместимость с альтернативными параметрами
+        if swin_dim is not None:
+            if swin_dims is None:
+                swin_dims = [swin_dim]  # Преобразуем в список
+        
+        # Устанавливаем значения по умолчанию, если не заданы
+        if swin_dims is None:
+            swin_dims = [256]  # Значение по умолчанию
+        if vit_dim is None:
+            vit_dim = 768  # Значение по умолчанию для ViT
+            
         self.use_multi_level = use_multi_level
         
         # Модуль выравнивания признаков для основного уровня

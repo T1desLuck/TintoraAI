@@ -496,8 +496,22 @@ class MultiHeadFeatureFusion(nn.Module):
         dropout (float): Вероятность dropout
         fusion_method (str): Метод слияния признаков ("attention", "routing", "adaptive", "concat")
     """
-    def __init__(self, input_dims, fusion_dim=256, num_heads=8, dropout=0.1, fusion_method="attention"):
+    def __init__(self, input_dims=None, fusion_dim=256, num_heads=8, dropout=0.1, fusion_method="attention",
+                 # Альтернативные параметры для совместимости с тестами
+                 in_channels_list=None, out_channels=None):
         super().__init__()
+        
+        # Совместимость с альтернативными параметрами
+        if in_channels_list is not None:
+            # Преобразуем список каналов в словарь
+            input_dims = {f"source_{i}": dim for i, dim in enumerate(in_channels_list)}
+        
+        if out_channels is not None:
+            fusion_dim = out_channels
+            
+        # Устанавливаем значения по умолчанию, если не заданы
+        if input_dims is None:
+            input_dims = {"swin": 256, "vit": 768}  # Значения по умолчанию
         
         self.input_dims = input_dims
         self.fusion_dim = fusion_dim

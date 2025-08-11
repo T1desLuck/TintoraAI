@@ -60,6 +60,15 @@ def window_partition(x, window_size):
         windows: (num_windows*B, window_size, window_size, C)
     """
     B, H, W, C = x.shape
+    
+    # Проверяем, что размеры кратны window_size
+    if H % window_size != 0 or W % window_size != 0:
+        # Дополняем до кратного размера
+        pad_h = (window_size - H % window_size) % window_size
+        pad_w = (window_size - W % window_size) % window_size
+        x = F.pad(x, (0, 0, 0, pad_w, 0, pad_h))
+        H, W = H + pad_h, W + pad_w
+    
     x = x.view(B, H // window_size, window_size, W // window_size, window_size, C)
     windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, C)
     return windows
@@ -477,7 +486,10 @@ class BasicLayer(nn.Module):
         ])
         
         # Слой даунсемплинга (при наличии)
-        self.downsample = downsample
+        if downsample is not None:
+            self.downsample = downsample(input_resolution, dim=dim)
+        else:
+            self.downsample = None
         
     def forward(self, x):
         """Прямое распространение через базовый слой."""

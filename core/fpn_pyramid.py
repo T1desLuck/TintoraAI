@@ -529,20 +529,30 @@ class FPNPyramid(nn.Module):
         output_stride (int): Шаг выходного слоя относительно входа
         use_attention (bool): Использовать ли механизм внимания
     """
-    def __init__(self, backbone_channels, fpn_channels=256, output_channels=128,
+    def __init__(self, backbone_channels=None, fpn_channels=256, output_channels=128,
                  use_ppm=True, output_stride=4, use_attention=True,
                  # Альтернативные названия параметров для совместимости с тестами
-                 in_channels=None, out_channels=None):
+                 in_channels=None, out_channels=None, in_channels_list=None, use_pyramid_pooling=None):
         super(FPNPyramid, self).__init__()
         
         # Совместимость с альтернативными названиями параметров
-        if in_channels is not None:
+        if in_channels_list is not None:
+            backbone_channels = in_channels_list
+        elif in_channels is not None:
             if isinstance(in_channels, list):
                 backbone_channels = in_channels
             else:
                 backbone_channels = [in_channels] if not isinstance(backbone_channels, list) else backbone_channels
+        
         if out_channels is not None:
             output_channels = out_channels
+            
+        if use_pyramid_pooling is not None:
+            use_ppm = use_pyramid_pooling
+            
+        # Устанавливаем значения по умолчанию, если не заданы
+        if backbone_channels is None:
+            backbone_channels = [96, 192, 384, 768]  # Значения по умолчанию для Swin-UNet
         
         # FPN для иерархии признаков
         self.fpn = AdaptiveFPN(backbone_channels, fpn_channels, use_bn=True, use_attention=use_attention)
