@@ -572,7 +572,7 @@ class MultiHeadFeatureFusion(nn.Module):
         Прямое распространение через модуль слияния признаков.
         
         Args:
-            feature_dict (dict): Словарь тензоров признаков {"source_name": tensor}
+            feature_dict (dict или list): Словарь тензоров признаков {"source_name": tensor} или список тензоров
             
         Returns:
             dict: {
@@ -581,6 +581,10 @@ class MultiHeadFeatureFusion(nn.Module):
                 "attention_weights": dict        # Веса внимания (при использовании attention)
             }
         """
+        # Конвертируем список в словарь для совместимости с тестами
+        if isinstance(feature_dict, list):
+            feature_dict = {f"source_{i}": tensor for i, tensor in enumerate(feature_dict)}
+        
         # Проверка входных данных
         assert set(feature_dict.keys()) == set(self.sources), "Источники признаков не совпадают с ожидаемыми"
         

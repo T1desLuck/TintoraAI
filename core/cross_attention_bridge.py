@@ -378,7 +378,7 @@ class CrossAttentionBridge(nn.Module):
             nn.Sigmoid()
         )
         
-    def forward(self, swin_features_list, vit_features, swin_resolution, vit_resolution):
+    def forward(self, swin_features_list, vit_features, swin_resolution=None, vit_resolution=None):
         """
         Прямое распространение через CrossAttentionBridge.
         
@@ -391,13 +391,37 @@ class CrossAttentionBridge(nn.Module):
         Returns:
             tuple: Обновленные признаки (updated_swin_features, updated_vit_features)
         """
+        # Автоматическое определение разрешений если не заданы
+        if swin_resolution is None:
+            if isinstance(swin_features_list, list):
+                swin_feat = swin_features_list[0]
+            else:
+                swin_feat = swin_features_list
+            if len(swin_feat.shape) == 4:  # [B, C, H, W]
+                swin_resolution = (swin_feat.shape[2], swin_feat.shape[3])
+            else:  # [B, N, C] - нужно вычислить H, W
+                N = swin_feat.shape[1]
+                H = W = int(N ** 0.5)
+                swin_resolution = (H, W)
+                
+        if vit_resolution is None:
+            if len(vit_features.shape) == 4:  # [B, C, H, W]
+                vit_resolution = (vit_features.shape[2], vit_features.shape[3])
+            else:  # [B, N, C] - нужно вычислить H, W
+                N = vit_features.shape[1]
+                H = W = int(N ** 0.5)
+                vit_resolution = (H, W)
+        
         # Подготовка признаков Swin (слияние нескольких уровней или использование верхнего уровня)
-        if self.use_multi_level and len(swin_features_list) > 1:
+        if self.use_multi_level and isinstance(swin_features_list, list) and len(swin_features_list) > 1:
             # Слияние признаков с разных уровней
             fused_swin_features = self.multi_level_fusion(swin_features_list)
         else:
             # Используем только верхний уровень
-            fused_swin_features = swin_features_list[0]
+            if isinstance(swin_features_list, list):
+                fused_swin_features = swin_features_list[0]
+            else:
+                fused_swin_features = swin_features_list
         
         # Выравнивание размерностей
         aligned_swin, aligned_vit = self.feature_alignment(

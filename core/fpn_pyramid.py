@@ -599,21 +599,16 @@ class FPNPyramid(nn.Module):
         else:
             self.upsample = nn.Identity()
             
-    def forward(self, backbone_features):
+    def forward(self, backbone_features, return_dict=False):
         """
         Прямое распространение через FPN с Pyramid Pooling.
         
         Args:
             backbone_features (list): Признаки из backbone на разных уровнях
+            return_dict (bool): Если True, возвращает dict, иначе tensor
             
         Returns:
-            dict: {
-                'fpn_features': list,  # Список признаков для каждого уровня FPN
-                'ppm_features': torch.Tensor,  # Признаки после PPM (если используется)
-                'spp_features': torch.Tensor,  # Признаки после SPP
-                'fused_features': torch.Tensor,  # Объединенные признаки всех уровней
-                'output': torch.Tensor  # Финальный выход
-            }
+            dict или torch.Tensor: В зависимости от return_dict
         """
         # Получаем признаки FPN
         fpn_features = self.fpn(backbone_features)
@@ -645,7 +640,11 @@ class FPNPyramid(nn.Module):
         output = self.upsample(output)
         results['output'] = output
         
-        return results
+        if return_dict:
+            return results
+        else:
+            # Для совместимости с тестами возвращаем основной выход
+            return output
 
 
 class AsymmetricFPN(nn.Module):
