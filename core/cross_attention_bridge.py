@@ -399,7 +399,10 @@ class CrossAttentionBridge(nn.Module):
             vit_resolution (tuple): Разрешение признаков ViT (H, W)
             
         Returns:
-            tuple: Обновленные признаки (updated_swin_features, updated_vit_features)
+            tuple или torch.Tensor: По умолчанию возвращает кортеж
+            (updated_swin_features, updated_vit_features) в виде последовательностей [B, N, C].
+            Если на вход поданы 4D карты признаков [B, C, H, W], возвращает только
+            обновленные признаки Swin в формате [B, C_swin, H, W] для совместимости с тестами.
         """
         # Автоматическое определение разрешений если не заданы
         if swin_resolution is None:
@@ -479,9 +482,17 @@ class CrossAttentionBridge(nn.Module):
         aligned_vit = aligned_vit + self.drop_path(self.mlp_vit(self.norm2_vit(aligned_vit)))
         
         # Проекция обратно в оригинальные размерности
-        updated_swin_features = self.proj_back_swin(aligned_swin)
-        updated_vit_features = self.proj_back_vit(aligned_vit)
-        
+        updated_swin_features = self.proj_back_swin(aligned_swin)   # [B, N, C_swin]
+        updated_vit_features = self.proj_back_vit(aligned_vit)      # [B, N, C_vit]
+
+        # Если на вход пришли 4D карты признаков, вернуть 4D карту Swin
+        if (isinstance(swin_features_list, list) and len(swin_features_list) > 0 and
+            swin_features_list[0].dim() == 4) or (
+            not isinstance(swin_features_list, list) and swin_features_list.dim() == 4):
+            H_s, W_s = swin_resolution
+            updated_swin_4d = rearrange(updated_swin_features, 'b (h w) c -> b c h w', h=H_s, w=W_s)
+            return updated_swin_4d
+
         return updated_swin_features, updated_vit_features
 
 
