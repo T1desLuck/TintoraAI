@@ -1,0 +1,184 @@
+# Базовая конфигурация TintoraAI (стартовый скелет)
+project_name: TintoraAI
+seed: 42
+
+paths:
+  data_root: data
+  train_dir: data/train
+  val_dir: data/val
+  test_dir: data/test
+  checkpoints: checkpoints
+  logs: logs
+  experiments: experiments/exp_default
+
+runtime:
+  device: auto  # auto/cuda/cpu
+  amp: true
+  num_workers: 4
+  pin_memory: true
+  cudnn_benchmark: true
+  ddp:
+    enabled: false
+    backend: auto  # nccl|gloo|mpi|auto
+checkpointing:
+  save_best: true
+  best_metric: ssim  # ssim|lpips
+  save_latest: true
+  latest_names:
+    model: latest.pth
+    ema: latest_ema.pth
+  best_names:
+    model: best_ssim.pth
+    ema: best_ssim_ema.pth
+
+optimizer:
+  type: adamw
+  lr_backbone: 8.0e-5
+  lr_decoder_heads: 2.0e-4
+  weight_decay_backbone: 1.0e-2
+  weight_decay_other: 1.0e-3
+
+scheduler:
+  type: cosine
+  warmup_steps: 1000
+
+training:
+  epochs: 9  # увеличено, чтобы охватить Фазы 1..4 (сжатые окна)
+  batch_size: 4
+  image_size: 256  # H=W, должно быть кратно 8
+  curriculum_phase: -1 # фазы: -1,0,1,2,3,4 по ТЗ
+  save_every_epochs: 1
+  validate_every_epochs: 1
+  dataset: advanced  # варианты: advanced|simple
+  aug:
+    flip_p: 0.5
+    crop_scale: [0.8, 1.0]
+    ab_jitter: 0.05
+  ema:
+    enabled: true
+    decay: 0.999
+    start_epoch: 2
+  dlb:
+    enabled: false
+    decay: 0.9
+  curriculum:
+    enabled: true
+    phases:
+      # Эпохи указываются включительно. Ниже — пример, синхронизируйте под свой план.
+      - from: 1
+        to: 2
+        phase: -1
+        omm_read_only: true
+        loss:
+          lambda_l1: 0.0
+          lambda_perc: 0.0
+          lambda_cc: 0.0
+          lambda_photo: 0.0
+          lambda_entropy: 0.0
+          lambda_ds: 0.0
+          lambda_cluster: 0.0
+          lambda_adv: 0.0
+      - from: 3
+        to: 5
+        phase: 0
+        omm_read_only: true
+        loss:
+          lambda_l1: 1.0
+          lambda_perc: 0.0
+          lambda_cc: 0.0
+          lambda_photo: 0.0
+          lambda_entropy: 0.0
+          lambda_ds: 0.0
+          lambda_cluster: 0.0
+          lambda_adv: 0.0
+      - from: 6
+        to: 6
+        phase: 1
+        omm_read_only: false
+        loss:
+          lambda_l1: 1.0
+          lambda_photo: 0.2
+          lambda_ds: 0.02
+      - from: 7
+        to: 7
+        phase: 2
+        omm_read_only: false
+        loss:
+          lambda_perc: 0.1
+          lambda_entropy: 0.01
+      - from: 8
+        to: 8
+        phase: 3
+        omm_read_only: false
+        loss:
+          lambda_cc: 0.2
+          lambda_cluster: 0.05
+      - from: 9
+        to: 9
+        phase: 4
+        omm_read_only: false
+        loss:
+          lambda_adv: 0.01
+
+loss:
+  lambda_l1: 1.0
+  lambda_perc: 0.0
+  lambda_adv: 0.0
+  lambda_photo: 0.0
+  lambda_ds: 0.0
+  lambda_cc: 0.0
+  lambda_cluster: 0.0
+  lambda_entropy: 0.0
+
+ssl:
+  enabled: true   # Phase -1 SSL pretraining (PatchNCE). Активировано для соответствия ТЗ.
+  patchnce:
+    temperature: 0.07
+    normalize: true
+
+omm:
+  enabled: true
+  N: 2048
+  D: 256
+  top_k: 64
+  tau: 0.07
+  alpha: 0.995
+  min_support: 15
+  sync:
+    enabled: true
+    update_interval: 1   # шаги между all_reduce буферов OMM (плейсхолдер)
+    master_rank: 0
+
+logging:
+  tensorboard: true
+  wandb: false
+  tb_flush_secs: 10
+  log_images_every: 50
+
+model:
+  # Временные (placeholder) каналы согласно приложению к ТЗ
+  c1: 96
+  c2: 192
+  c3: 384
+  film_dim: 256
+  out_channels_ab: 2
+  out_channels_sat: 1
+  use_saturation_head: true # Включить голову насыщенности для EntropyLoss
+  # Интеграция GuideNet
+  use_guidenet: false
+  guide_feature_dim: null
+  guide_out_dim: null
+
+gan:
+  enabled: true  # включено для проверки Phase 4
+  input_nc: 3
+  ndf: 64
+  n_layers: 3
+  loss_type: hinge  # hinge|bce
+
+validation:
+  enabled: true
+  batch_size: 4
+  ssim_window: 11
+  ssim_sigma: 1.5
+  lpips: false  # опционально; требует пакет lpips
