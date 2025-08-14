@@ -1,0 +1,9 @@
+name: Lint Markdown
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Lint Markdown
+        uses: tomwhross/write-good-action@v1.6
