@@ -11,6 +11,10 @@ def lab_to_rgb_tensor(L: torch.Tensor, a: torch.Tensor, b: torch.Tensor) -> torc
     """
     B, _, H, W = L.shape
     L_ = (L + 1.0) * 50.0
+    # Клиппинг в допустимые диапазоны Lab, чтобы уменьшить предупреждения при конверсии
+    L_ = torch.clamp(L_, 0.0, 100.0)
+    a = torch.clamp(a, -128.0, 127.0)
+    b = torch.clamp(b, -128.0, 127.0)
     lab = torch.cat([L_, a, b], dim=1)  # (B,3,H,W)
     # skimage ожидает NumPy-массив в формате HWC (Lab)
     out = []
