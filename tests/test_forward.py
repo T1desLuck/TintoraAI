@@ -1,7 +1,7 @@
 import torch
 import pytest
 
-from models import TintoraAI
+from src.models import TintoraAI
 
 
 def test_model_forward_shapes():

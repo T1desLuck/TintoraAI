@@ -10,7 +10,7 @@
 
 [![Python Version](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-%3E%3D1.9.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Version](https://img.shields.io/badge/Версия-2.1.0-4CAF50?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI.git)
+[![Version](https://img.shields.io/badge/Версия-2.0.3-4CAF50?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI.git)
 [![License](https://img.shields.io/badge/Лицензия-MIT-007ACC?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI/blob/a588a27c8a52600bb0cfbf9eff56a0291502f78e/LICENSE)
 [![Open In Colab](https://img.shields.io/badge/Open%20in-Colab-orange?style=for-the-badge&logo=googlecolab&logoColor=white)](https://colab.research.google.com/github/T1desLuck/TintoraAI/blob/main/your_notebook.ipynb)
 [![Repo Size](https://img.shields.io/github/repo-size/T1desLuck/TintoraAI?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI)
@@ -26,6 +26,10 @@
 > **Гибридный энкодер** — ConvNeXt‑Tiny (локальные детали) → CoAtNet‑light (Conv+Attention) → Geometry‑Aware Transformer (глобальный контекст)
 >
 > **Семантическая согласованность** — OMM (банк прототипов) + CRB формируют глобальные цветовые условия для FiLM в декодере
+>
+> 🧩 **VGG только для обучения** — используетcя исключительно для perceptual loss; на инференсе не нужен и в модель не входит. Других внешних весов не используется.
+>
+> ⚡ **AMP + EMA по умолчанию** — AMP ускоряет и экономит память; EMA стабилизирует качество и применяется на инференсе.
 
 > [!NOTE]
 > 🎯 **Curriculum‑обучение** — поэтапная активация компонентов: SSL предобучение → базовое L1 → геометрия → перцептуалка → OMM чтение/ColorConsistency → GAN
@@ -33,13 +37,25 @@
 > 👁️ **PatchGAN (опц.)** — подключается на финальной фазе для повышения реалистичности
 >
 > 🧠 **OMM** — объектная память с EMA‑обновлением прототипов и статистикой цветов
+>
+> 🧵 **Распределённое обучение (DDP)** — поддержка torchrun; синхронизация OMM выполняется на каждом шаге обучения.
+>
+> 🧩 **Грид‑пулинг OMM** — адаптивная сетка регионов (по умолчанию 7×7). Меняется через `omm.extra_params.grid` в `configs/default.yaml`.
 
 > [!TIP]
 > 💻 Командная строка с прогресс-индикаторами
 >
 > ⚙️ Настройка через YAML-конфигурации без изменения кода
 >
-> **Контроль качества** — поддержка расчёта метрик (SSIM, PSNR, LPIPS) в процессе валидации
+> **Контроль качества** — поддержка расчёта метрик (SSIM и опционально LPIPS) в процессе валидации
+>
+> 🖼 **Произвольные размеры на инференсе** — автоматический padding до кратности 8 и обратный unpad.
+>
+> 🗺 **Тайловый инференс** — для очень больших изображений с overlap и feathering краёв.
+>
+> 🧪 **Тестирование** — см. `TEST.md` для описания тестов и сценариев запуска `test_project.py`.
+>
+> 🔁 **Воспроизводимость** — ключи `project_name` и `seed` в `configs/default.yaml` для фиксирования экспериментов.
 
 ## 🚀 Быстрый старт
 
@@ -84,6 +100,7 @@ torchrun --standalone --nproc_per_node=NUM_GPUS -m src.train --config configs/de
 
 - [Инструкция по установке](INSTALL.md) — подробное руководство по установке на различных платформах
 - [Руководство по обучению](TRAINING.md) — подготовка данных, конфигурация и запуск обучения
+- [Руководство по тестированию](TEST.md) — как запускать тесты, какие файлы что проверяют, примеры сценариев
 
 ## 🖼️ Примеры результатов
 <div align="center">
@@ -105,7 +122,7 @@ ConvNeXt‑Tiny  →  CoAtNet‑light  →  Geometry‑Aware Transformer
       │                    │                     │
       └──────────────┬─────┴─────────────┬───────┘
                      ▼                   ▼
-            Depth / Illum Heads      Region Pooling (8×8)
+            Depth / Illum Heads      Region Pooling (grid, по умолчанию 7×7)
                      │                   │
                      ▼                   ▼
                  Нормали               OMM (банк прототипов: N×D)
@@ -124,15 +141,16 @@ ConvNeXt‑Tiny  →  CoAtNet‑light  →  Geometry‑Aware Transformer
 ## 🛠️ Конфигурация
 Проект настраивается через один файл `configs/default.yaml`:
 
+- `project_name`, `seed`: имя проекта и глобальный сид
 - `paths`: директории данных, логов, чекпоинтов
 - `runtime`: AMP, DDP, num_workers, устройство
 - `checkpointing`: имена и политика сохранения `latest`/`best`
 - `optimizer`: тип, разные LR для backbone/decoder, weight decay
 - `scheduler`: схема (например, cosine), warmup
-- `training`: батч, эпохи, image_size, EMA, curriculum (фазы −1…4)
+- `training`: батч, эпохи, image_size, dataset, aug, EMA, DLB, curriculum (фазы −1…4)
 - `loss`: веса L1/Perceptual/Photometric/CC/Entropy/Cluster/Adv
-- `omm`: N, D, top_k, tau, alpha, min_support
-- `model`: каналы c1/c2/c3, film_dim, use_saturation_head, GuideNet (опц.)
+- `omm`: N, D, top_k, tau, alpha, min_support, sync
+- `model`: c1/c2/c3, film_dim, use_saturation_head, use_guidenet (+ guide_feature_dim/guide_out_dim)
 - `gan`: параметры PatchGAN (если включён)
 - `ssl`: настройки PatchNCE для предобучения (Phase −1)
 - `validation`: батч, метрики (SSIM/LPIPS), параметры окон
@@ -173,13 +191,144 @@ ConvNeXt‑Tiny  →  CoAtNet‑light  →  Geometry‑Aware Transformer
 ```
 
 ## 🙏 Благодарности
-- Swin Transformer - за архитектуру трансформеров
-- CycleGAN и pix2pix - за вдохновение в области генеративных моделей
-- PyTorch - за фреймворк глубокого обучения
+- PyTorch — за фреймворк глубокого обучения
+- ConvNeXt — за идеи архитектуры бэкбона ранних этапов энкодера
+- CoAtNet — за гибрид Conv+Attention подход для среднего уровня признаков
+- ColorFormer (ECCV'22) — за концепцию memory decoder/прототипов для цветовой согласованности
+- PatchGAN — за идею локального дискриминатора для адверсариального обучения (фаза 4)
+- VGG — за перцептуальные признаки для perceptual loss
+- SimCLR — за идеи self-supervised pre-training (contrastive) для разогрева энкодера
 
 ## 📞 Контакты
 - GitHub Issues: https://github.com/T1desLuck/TintoraAI/issues
 - [![Email](https://img.shields.io/badge/Email-tidesluck%40icloud.com-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:tidesluck@icloud.com)
+
+## 📁 Дерево проекта (с комментариями)
+Ниже приведена структура репозитория с краткими пояснениями по ключевым файлам и папкам. Папки для данных и результатов могут отсутствовать при клонировании (GitHub не хранит пустые директории) — создайте их вручную, как показано ниже.
+
+```text
+TintoraAI/
+├─ README.md                  # Общее описание проекта, ссылки и быстрый старт
+├─ INSTALL.md                 # Подробная установка
+├─ TRAINING.md                # Руководство по обучению модели
+├─ TEST.md                    # Руководство по тестированию и сценарии запуска
+├─ requirements.txt           # Зависимости проекта
+├─ main.py                    # Точка входа (при необходимости)
+├─ test_project.py            # Русскоязычный лаунчер тестов
+├─ configs/                   # Конфигурации (YAML)
+│  └─ default.yaml            # Базовая конфигурация (пути, обучение, лоссы, модель)
+├─ src/                       # Исходный код библиотеки TintoraAI
+│  ├─ __init__.py            # Инициализация пакета src
+│  ├─ train.py               # Скрипт обучения: python -m src.train --config ...
+│  ├─ inference.py           # Скрипт инференса: python -m src.inference --input ...
+│  ├─ datasets/               # Датасеты и аугментации
+│  │  ├─ __init__.py
+│  │  ├─ simple_dataset.py    # Простой датасет (пример)
+│  │  ├─ advanced_dataset.py  # Продвинутый датасет (используется по умолчанию)
+│  │  └─ augmentations.py     # Базовые аугментации
+│  ├─ losses/                 # Функции потерь
+│  │  ├─ __init__.py
+│  │  ├─ advanced.py          # PhotometricSmoothnessLoss и др.
+│  │  ├─ basic.py             # Базовые потери (L1 и т.п.)
+│  │  ├─ perceptual.py        # Перцептуальные потери (VGG)
+│  │  ├─ gan.py               # Потери для GAN
+│  │  └─ patchnce.py          # Настройки/заготовка для SSL PatchNCE
+│  ├─ models/                 # Архитектура модели
+│  │  ├─ __init__.py         # Инициализация пакета моделей
+│  │  ├─ discriminator.py     # PatchGAN дискриминатор (фаза 4)
+│  │  ├─ guidenet.py          # Доп. сеть-подсказчик (опционально)
+│  │  ├─ tintoraai.py         # Основной класс модели TintoraAI
+│  │  ├─ backbone/            # Бэкбоны (ConvNeXt/CoAtNet/GAT)
+│  │  │  ├─ __init__.py
+│  │  │  ├─ convnext_tiny.py      # Реализация ConvNeXt‑Tiny (ранний этап энкодера)
+│  │  │  ├─ convnext_wrapper.py   # Обёртка/унификация интерфейса ConvNeXt
+│  │  │  ├─ coatnet_light.py      # Лёгкий CoAtNet (Conv+Attention) для среднего уровня
+│  │  │  ├─ coatnet_wrapper.py    # Обёртка/конфигурация CoAtNet
+│  │  │  └─ gat_light.py          # Geometry‑Aware Transformer (облегчённый, глобальный контекст)
+│  │  ├─ heads/               # Головы глубины/освещённости/и т.п.
+│  │  │  ├─ __init__.py       # Инициализация пакета голов
+│  │  │  └─ heads.py
+│  │  ├─ crb/                 # Color Reasoning Block (CRB)
+│  │  │  ├─ __init__.py       # Инициализация пакета CRB
+│  │  │  └─ crb.py
+│  │  ├─ omm/                 # Object Memory Module (OMM)
+│  │  │  ├─ __init__.py       # Инициализация модуля памяти
+│  │  │  └─ object_memory.py  # Банк прототипов: assign (cosine/top‑k), EMA‑обновления, min_support, статистика цветов (μ/σ), чтение/запись
+│  │  └─ decoder/             # Декодер (U‑Net++)
+│  │     ├─ __init__.py       # Инициализация пакета декодера
+│  │     └─ decoder_unetpp.py
+│  └─ utils/                  # Утилиты и вспомогательные модули
+│     ├─ __init__.py
+│     ├─ balancer.py          # Альтернативный балансировщик потерь
+│     ├─ config.py            # Утилиты для работы с конфигами
+│     ├─ dist.py              # Вспомогательные функции для DDP/распределёнки
+│     ├─ dlb.py               # DynamicLossBalancer
+│     ├─ lab_color.py         # Преобразования Lab/RGB
+│     ├─ metrics.py           # Метрики (SSIM/LPIPS)
+│     └─ seed.py              # Фиксация сидов/детерминизм
+├─ tests/                     # Набор автотестов (pytest)
+│  ├─ test_dlb.py             # Тесты балансировщика потерь
+│  ├─ test_forward.py         # Быстрый прогон forward модели
+│  ├─ test_inference.py       # Тесты инференса (single/tiled)
+│  ├─ test_losses.py          # Тесты лоссов (advanced и др.)
+│  └─ test_modules.py         # Модули: backbone/heads/CRB/decoder
+├─ data/                      # [Папка-плейсхолдер] Данные (создайте вручную)
+│  ├─ train/                  # Обучающие изображения (jpg/png) без подпапок
+│  ├─ val/                    # Валидационные изображения
+│  └─ test/                   # Тестовые изображения (опционально)
+├─ checkpoints/               # [Папка-плейсхолдер] Чекпоинты моделей (*.pth)
+├─ logs/                      # [Папка-плейсхолдер] Логи (TensorBoard, тексты)
+└─ experiments/               # [Папка-плейсхолдер] Эксперименты/визуализации
+   └─ exp_default/            # Каталог эксперимента по умолчанию
+```
+
+Примечания:
+- Плейсхолдер‑папки (`data/`, `checkpoints/`, `logs/`, `experiments/…`) создаются пользователем локально — они не версионируются, если пустые.
+- Пути по умолчанию настраиваются в `configs/default.yaml` секция `paths.*`.
+- Для инференса минимум нужен вход (`--input`), конфиг и (обычно) чекпоинт из `checkpoints/`.
+
+## 🧪 Тесты
+
+Рекомендуемый способ — удобный лаунчер в корне проекта `test_project.py`:
+
+```powershell
+# Справка и список целей
+python test_project.py help
+python test_project.py list
+
+# Запуск полного набора
+python test_project.py run all
+
+# Примеры точечных запусков
+python test_project.py run modules
+python test_project.py run modules::test_crb
+python test_project.py run inference
+```
+
+Лаунчер печатает понятные сообщения на русском об успешном прохождении или причинах ошибок. Его также удобно вызывать из Jupyter/Colab:
+
+```python
+from test_project import run, show_help, list_targets
+show_help(); list_targets(); run("modules")
+```
+
+Альтернатива: запуск напрямую через pytest
+
+```powershell
+pip install pytest
+pytest -q                    # все тесты
+pytest tests/test_inference.py -q
+pytest -q -k "forward"
+```
+
+Что покрывают тесты:
+- Проверка прямого прохода модели (`tests/test_forward.py`).
+- Инференс одиночный и тайловый (`tests/test_inference.py`).
+- Базовые лоссы и дополнительные компоненты (`tests/test_losses.py`).
+- Модули бэкбонов/голов/декодера и утилиты (`tests/test_modules.py`).
+- Балансировщик потерь DLB (`tests/test_dlb.py`).
+
+Ожидаемый результат: краткий отчёт об успехе/падениях (через `test_project.py`) или отчёт pytest. Подробности и сценарии см. в `TEST.md`.
 
 ## 📄 Лицензия
 Этот проект распространяется под лицензией MIT. См. файл LICENSE для более подробной информации.

@@ -1,4 +1,4 @@
-from utils import DynamicLossBalancer
+from src.utils import DynamicLossBalancer
 
 
 def test_dlb_weights_balance():

@@ -2,6 +2,8 @@
 
 В этом документе представлены подробные инструкции по установке и настройке системы TintoraAI на различных платформах. Для удобства инструкции разделены по средам: локальная установка, облачные платформы и инструкции для различных операционных систем.
 
+> Навигация: [README.md](README.md) • [TRAINING.md](TRAINING.md) • [TEST.md](TEST.md)
+
 ## 📋 Содержание
 
 - [Системные требования](#системные-требования)
@@ -36,6 +38,30 @@
 - torchvision совместимой версии
 - numpy, pillow, scikit-image, tqdm, tensorboard
 
+## ⚡ Быстрый старт (локально)
+
+1. Клонируйте и перейдите в каталог:
+```bash
+git clone https://github.com/T1desLuck/TintoraAI.git && cd TintoraAI
+```
+2. Создайте и активируйте окружение, установите зависимости:
+```bash
+python -m venv venv
+# Linux/macOS
+source venv/bin/activate
+# Windows (PowerShell)
+venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+3. Проверьте инференс (без чекпоинта будут случайные веса):
+```bash
+python -m src.inference --input data --config configs/default.yaml --output output
+```
+4. Результаты:
+```bash
+ls output   # или Get-ChildItem output на Windows
+```
+
 ## 🖥️ Локальная установка
 
 ### Общие шаги
@@ -69,7 +95,7 @@ python -c "import torch;print(torch.__version__, 'cuda available:', torch.cuda.i
 Для использования GPU установите PyTorch с поддержкой CUDA 12.1 (колёса включают необходимые библиотеки). Отдельная установка CUDA Toolkit/cuDNN не требуется. При наличии системной CUDA рекомендуется версия 12.1.
 
 #### Пошаговая установка
-1. Откройте командную строку Windows (CMD) или PowerShell от имени администратора:
+1. Откройте обычный PowerShell или CMD (права администратора не требуются):
 2. Создайте директорию для проекта и перейдите в неё:
 ```powershell
 mkdir C:\Projects
@@ -90,6 +116,10 @@ venv\Scripts\activate.bat
 
 # Активация в PowerShell
 venv\Scripts\Activate.ps1
+```
+Если PowerShell блокирует активацию скриптов, разрешите выполнение только для текущего пользователя и затем перезапустите PowerShell:
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 5. Установите зависимости:
 ```powershell
@@ -157,6 +187,7 @@ sudo apt install python3-dev python3-pip git
 # Пример установки PyTorch 2.3.1 с CUDA 12.1 (официальный индекс колёс)
 pip3 install --index-url https://download.pytorch.org/whl/cu121 torch torchvision torchaudio
 ```
+Примечание: файл `requirements.txt` уже закрепляет совместимые версии `torch`/`torchvision`. Если вы предварительно установили PyTorch через индекс `cu121`, следующий шаг `pip install -r requirements.txt` оставит совместимые версии без переустановки.
 
 #### Пошаговая установка
 1. Создайте директорию для проекта и перейдите в неё:
@@ -257,7 +288,7 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Пример команды по умолчанию (можете переопределить при запуске)
-CMD ["python", "-m", "src.inference", "--input", "data/samples/example1.jpg", "--config", "configs/default.yaml", "--output", "output"]
+CMD ["python", "-m", "src.inference", "--input", "data", "--config", "configs/default.yaml", "--output", "output"]
 ```
 4. Соберите и запустите контейнер:
 ```bash
@@ -333,11 +364,15 @@ python -m src.inference --help
 pytest tests/
 ```
 
-4. Проверка инференса на примере:
+4. Проверка инференса на своём изображении:
 ```bash
-# Запустите инференс на примере
-python -m src.inference --input data/samples/example1.jpg --config configs/default.yaml --output output
+# Поместите одно или несколько ваших изображений в каталог data/ и запустите инференс
+python -m src.inference --input data --config configs/default.yaml --output output
 ```
+
+Примечания:
+- Если не указать `--output`, по умолчанию результаты сохраняются в каталог, заданный конфигом: `paths.experiments` (или `paths.logs` как резерв) с подпапкой `val_pred`. Это соответствует логике `src/inference.py`.
+- По умолчанию загрузится чекпоинт `checkpoints/latest.pth` (путь можно задать в `configs/default.yaml` через `paths` и `checkpointing`). Если файл отсутствует, скрипт честно предупредит и запустит модель со случайными весами.
 
 5. Проверьте результат (файлы появятся в каталоге output):
 ```bash

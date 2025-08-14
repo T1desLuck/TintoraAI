@@ -1,7 +1,7 @@
 import torch
 import pytest
 
-from losses import (
+from src.losses import (
     PhotometricSmoothnessLoss,
     DepthSmoothnessLoss,
     ColorConsistencyPyrLoss,
