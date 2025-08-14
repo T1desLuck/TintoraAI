@@ -1,4 +1,3 @@
-from typing import Tuple
 import torch
 from skimage import color
 
