@@ -1,11 +1,9 @@
 import torch
-import pytest
 
 # Импорт компонентов модели
 from src.models.backbone import ConvNeXtTiny, CoAtNetLight
 from src.models.backbone.gat_light import GATLight
 from src.models.heads.heads import DepthHead, IlluminationHead
-from src.models.omm.object_memory import ObjectMemoryModule
 from src.models.crb.crb import ColorReasoningBlock
 from src.models.decoder import UNetPPDecoder
 
