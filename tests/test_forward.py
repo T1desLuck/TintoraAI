@@ -1,4 +1,5 @@
 import torch
+import pytest
 
 from src.models import TintoraAI
 
