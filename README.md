@@ -1,4 +1,4 @@
-# TintoraAI: Продвинутая система колоризации изображений
+# TintoraAI: Продвинутая система колоризации изображений!
 
 <div align="center">
   <img src="assets/tintorai_logo.png" alt="TintoraAI Logo" width="1024"/>
