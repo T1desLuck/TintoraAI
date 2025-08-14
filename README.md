@@ -104,9 +104,9 @@ torchrun --standalone --nproc_per_node=NUM_GPUS -m src.train --config configs/de
 
 ## 🖼️ Примеры результатов
 <div align="center">
-  <img src="assets/examples/example1.jpg" alt="Example 1" width="80%"/>
+  <img src="assets/bw.jpg" alt="Example 1" width="65%"/>
   <p><i>Сравнение исходного черно-белого изображения и результата колоризации</i></p>
-  <img src="assets/examples/example2.jpg" alt="Example 2" width="80%"/>
+  <img src="assets/color.jpg" alt="Example 2" width="65%"/>
   <p><i>Применение разных стилей к одному изображению</i></p>
 </div>
 
