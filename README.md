@@ -10,7 +10,7 @@
 
 [![Python Version](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-%3E%3D1.9.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Version](https://img.shields.io/badge/Версия-1.1.0-4CAF50?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI.git)
+[![Version](https://img.shields.io/badge/Версия-2.1.0-4CAF50?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI.git)
 [![License](https://img.shields.io/badge/Лицензия-MIT-007ACC?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI/blob/a588a27c8a52600bb0cfbf9eff56a0291502f78e/LICENSE)
 [![Open In Colab](https://img.shields.io/badge/Open%20in-Colab-orange?style=for-the-badge&logo=googlecolab&logoColor=white)](https://colab.research.google.com/github/T1desLuck/TintoraAI/blob/main/your_notebook.ipynb)
 [![Repo Size](https://img.shields.io/github/repo-size/T1desLuck/TintoraAI?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI)
