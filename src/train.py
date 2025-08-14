@@ -4,7 +4,6 @@ import argparse
 from tqdm import tqdm
 import time
 
-import os
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from torch.nn.parallel import DistributedDataParallel as DDP
