@@ -1,5 +1,4 @@
 import torch
-import pytest
 
 from src.losses import (
     PhotometricSmoothnessLoss,
