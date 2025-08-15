@@ -47,6 +47,7 @@ class TintoraAI(nn.Module):
         self.stage1 = ConvNeXtTiny()
         self.stage2 = CoAtNetLight()
         self.stage3 = GATLight(in_channels=192, out_channels=384)
+        # Приведение каналов из CoAtNet (256) к ожидаемым 192 для GAT
         self.coatnet_channel_fix = nn.Conv2d(256, 192, kernel_size=1)
 
         # Модуль объектной памяти (OMM) и проекционный слой
@@ -76,8 +77,6 @@ class TintoraAI(nn.Module):
         self.ctx_hidden = 256
         self.crb = ColorReasoningBlock(c3=c3, cmem=self.omm_dim, film_stage_dims=(c3, c2, c1), geom_ch=1+1+3, ctx_hidden=self.ctx_hidden)
         self.decoder = UNetPPDecoder(c1=c1, c2=c2, c3=c3, mid=128)
-        self.ab_head = nn.Conv2d(self.decoder.output_channels, 2, kernel_size=1)
-        self.sat_head = nn.Conv2d(self.decoder.output_channels, 1, kernel_size=1) if use_saturation_head else None
         # GuideNet (опционально)
         if self.use_guidenet:
             g_in = guide_feature_dim if guide_feature_dim is not None else c3
@@ -91,10 +90,10 @@ class TintoraAI(nn.Module):
         B, _, H, W = L.shape
         # Бэкбон
         F1 = self.stage1(L)[-1]  # (B,c1,H/4,W/4)
-        # CoAtNetLight возвращает карты признаков для стадий 0, 1, 2. Нужна стадия 1 (192 канала).
+        # CoAtNetLight (обёртка timm) возвращает список фич; берём стадию 2 (обычно 256 каналов)
         F2_list = self.stage2(F1)
-        F2 = F2_list[2]  # Фактически (B, 256, H/8, W/8)
-        F2 = self.coatnet_channel_fix(F2) # Приводим число каналов к 192
+        F2 = F2_list[2]
+        F2 = self.coatnet_channel_fix(F2)
         F3 = self.stage3(F2)[-1]  # (B,c3,H/16,W/16)
 
         # L2-нормализация F2/F3 согласно ТЗ
@@ -112,7 +111,7 @@ class TintoraAI(nn.Module):
 
         # Карты глубины и освещённости из голов
         D = self.depth_head(F2n, F3n, (H, W))
-        I = self.illum_head(F2n, F3n, (H, W))
+        illum = self.illum_head(F2n, F3n, (H, W))
 
         # Вычисляем нормали из глубины через градиенты Собеля
         normals = self.compute_normals(D)
@@ -125,15 +124,15 @@ class TintoraAI(nn.Module):
             # Если вход GuideNet меньше c3, ожидается, что GuideNet настроен под guide_feature_dim
             guide_ctx = self.guide(f3_vec)  # (B, ctx_hidden)
 
-        film = self.crb(F3n, mem_map, D, I, normals, guide_ctx=guide_ctx)  # {gamma:(S,B,C), beta:(S,B,C)}
-        x_ab, x_sat_raw = self.decoder(F1, F2n, F3n, film["gamma"], film["beta"], (H, W))
+        film = self.crb(F3n, mem_map, D, illum, normals, guide_ctx=guide_ctx)  # {gamma:(S,B,C), beta:(S,B,C)}
+        x_ab, x_sat = self.decoder(F1, F2n, F3n, film["gamma"], film["beta"], (H, W))
         a, b = torch.chunk(x_ab, 2, dim=1)
 
         out = {
             "a": a,
             "b": b,
             "D": D,
-            "I": I,
+            "I": illum,
             "normals": normals,
             "F2": F2n,
             "F3": F3n,
@@ -142,9 +141,8 @@ class TintoraAI(nn.Module):
             "mem": mem,
         }
 
-        if self.sat_head is not None and x_sat_raw is not None:
-            s = torch.sigmoid(x_sat_raw)
-            out["sat"] = s
+        # Декодер уже возвращает насыщенность после sigmoid
+        out["sat"] = x_sat
 
         if self.guide is not None:
             out["guide_params"] = guide_ctx
