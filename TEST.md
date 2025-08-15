@@ -99,7 +99,7 @@ run("modules::test_crb")
   - Проверка форм выходных тензоров и наличия ключевых предсказаний.
 
 - `tests/test_inference.py`
-  - Проверка `colorize_single` и `colorize_tiled` из `src/inference/__init__.py`.
+  - Проверка `colorize_single` и `colorize_tiled` из `src/inference.py`.
   - Достоверность диапазонов значений, корректность сборки результата.
 
 - `tests/test_losses.py`
