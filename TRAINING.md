@@ -195,7 +195,12 @@ tail -50 logs/training.log              # bash
 ```
 
 ### Контрольные точки
-Контрольные точки (чекпоинты) сохраняются в директорию `paths.checkpoints` (по умолчанию `checkpoints/`). Имена файлов берутся из `checkpointing.latest_names` и `checkpointing.best_names`:
+Контрольные точки (чекпоинты) сохраняются в директорию `paths.checkpoints` (по умолчанию `checkpoints/`). Имена файлов берутся из `checkpointing.latest_names` и `checkpointing.best_names`.
+
+По умолчанию (см. `configs/default.yaml`):
+- latest: `latest.pth`, `latest_ema.pth`
+- best (по метрике `checkpointing.best_metric`, по умолчанию `ssim`): `best_ssim.pth`, `best_ssim_ema.pth`
+
 ```bash
 # Список доступных чекпоинтов
 ls -lh checkpoints/
@@ -234,6 +239,7 @@ omm:
 ```bash
 python -m src.inference --input data/val --config configs/default.yaml --checkpoint checkpoints/latest.pth --output outputs/val_pred
 ```
+Если флаг `--output` не указан, путь вывода определяется из YAML: берётся `paths.experiments` (по умолчанию `experiments/exp_default`) или, если он отсутствует, `paths.logs`. В обоих случаях результаты сохраняются в подпапку `val_pred` (см. `src/inference.py`).
 
 ### Метрики качества
 TintoraAI использует следующие метрики (встроенная поддержка при `validation.enabled: true`):
