@@ -64,6 +64,13 @@ python test_project.py run modules::test_crb
 - `list` — доступные цели (алиасы) с краткими описаниями.
 - `run <цель>` — запуск тестов по выбранной цели. Поддерживаются точечные тесты с `::`.
 
+Дополнительно:
+- `preview [опции]` — сохраняет предпросмотр подготовки изображения без запуска PyTest. Читает `configs/default.yaml`, учитывает `training.aug.defects` при флаге `--enable_defects`. Пример:
+  ```bash
+  python test_project.py preview --input assets/color.jpg --save_L --enable_defects \
+    --output experiments/exp_default/preview_from_launcher
+  ```
+
 В Jupyter/Colab:
 ```python
 from test_project import run, show_help, list_targets
@@ -122,6 +129,11 @@ run("modules::test_crb")
 - Полный прогон перед коммитом:
   ```bash
   python test_project.py run all
+  ```
+- Быстро посмотреть, как подготовка изображения (включая L‑дефекты) повлияет на входы модели:
+  ```bash
+  python test_project.py preview --input assets/color.jpg --save_L --enable_defects
+  # Файлы появятся в experiments/exp_default/preview_preprocess (или указанной папке)
   ```
 
 ## Подсказки и устранение неполадок
