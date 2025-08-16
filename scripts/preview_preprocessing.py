@@ -16,6 +16,7 @@ from src.datasets.augmentations import (
     resize_shorter_side_then_random_crop,
     augment_L_defects,
 )
+from src.datasets.augmentations import _resolve_resample
 
 
 def load_rgb(path: Path) -> Image.Image:
@@ -40,7 +41,9 @@ def apply_pipeline(img: Image.Image,
                    disable_flip: bool,
                    disable_jitter: bool,
                    enable_defects: bool,
-                   defects_cfg: dict | None) -> dict:
+                   defects_cfg: dict | None,
+                   geom_mode: str = "random_crop",
+                   resize_filter: str = "lanczos") -> dict:
     """
     Возвращает словарь с ключами:
     - original_rgb: PIL.Image
@@ -52,26 +55,21 @@ def apply_pipeline(img: Image.Image,
     original = img.copy()
     notes.append(f"original_size={img.size}")
 
-    if dataset_kind == "advanced":
-        if mode == "train":
-            # Геометрия как в AdvancedColorizationDataset(train=True)
-            # Пропорциональный ресайз по короткой стороне >= size, затем случайный кроп size x size
-            img2 = resize_shorter_side_then_random_crop(img, image_size)
-            notes.append(f"resize_shorter_side_then_random_crop -> {image_size}x{image_size}")
-            if not disable_flip:
-                img2 = random_horizontal_flip(img2, p=flip_p)
-                notes.append(f"random_horizontal_flip(p={flip_p})")
-            processed_geom = img2
-        else:
-            # Валидация: без искажения аспекта (shorter-side resize + center-crop)
-            img2 = resize_shorter_side_and_center_crop(img, image_size)
-            notes.append(f"resize_shorter_side_and_center_crop -> {image_size}x{image_size}")
-            processed_geom = img2
-    else:  # simple
-        # SimpleDataset теперь тоже без искажения аспекта
-        img2 = resize_shorter_side_and_center_crop(img, image_size)
+    res = _resolve_resample(resize_filter)
+    sel_mode = (geom_mode or ("random_crop" if mode == "train" else "center_crop")).lower()
+    if sel_mode == "random_resized_crop":
+        img2 = random_resized_crop(img, image_size, scale=tuple(crop_scale), resample=res)
+        notes.append(f"random_resized_crop(scale={tuple(crop_scale)}) -> {image_size}x{image_size}")
+    elif sel_mode == "random_crop":
+        img2 = resize_shorter_side_then_random_crop(img, image_size, resample=res)
+        notes.append(f"resize_shorter_side_then_random_crop -> {image_size}x{image_size}")
+    else:  # center_crop
+        img2 = resize_shorter_side_and_center_crop(img, image_size, resample=res)
         notes.append(f"resize_shorter_side_and_center_crop -> {image_size}x{image_size}")
-        processed_geom = img2
+    if (dataset_kind == "advanced") and (mode == "train") and (not disable_flip):
+        img2 = random_horizontal_flip(img2, p=flip_p)
+        notes.append(f"random_horizontal_flip(p={flip_p})")
+    processed_geom = img2
 
     notes.append(f"processed_geom_size={processed_geom.size}")
     # Конвертация в Lab и обратная сборка с jitter ab (как в датасете)
@@ -197,6 +195,11 @@ def main():
     crop_scale = aug.get("crop_scale", [0.8, 1.0])
     ab_jitter = float(aug.get("ab_jitter", 0.05))
     defects_cfg = aug.get("defects", None)
+    # Geometry and resize filter from config
+    geom_cfg = train_cfg.get("geometry", {})
+    geom_train_mode = str(geom_cfg.get("train_mode", "random_crop"))
+    geom_val_mode = str(geom_cfg.get("val_mode", "center_crop"))
+    resize_filter = str(train_cfg.get("resize", {}).get("filter", "lanczos"))
 
     inp = Path(args.input)
     if not inp.exists() or not inp.is_file():
@@ -217,6 +220,8 @@ def main():
         disable_jitter=args.disable_jitter,
         enable_defects=args.enable_defects,
         defects_cfg=defects_cfg,
+        geom_mode=(geom_train_mode if args.mode == "train" else geom_val_mode),
+        resize_filter=resize_filter,
     )
 
     stem = inp.stem
