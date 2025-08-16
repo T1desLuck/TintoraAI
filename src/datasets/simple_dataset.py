@@ -1,4 +1,8 @@
-from .augmentations import resize_shorter_side_and_center_crop
+from .augmentations import (
+    resize_shorter_side_and_center_crop,
+    resize_shorter_side_then_random_crop,
+    random_resized_crop,
+)
 from pathlib import Path
 from typing import Tuple, List
 import torch
@@ -30,7 +34,7 @@ class SimpleColorizationDataset(Dataset):
     кортеж (L, ab, path). Предназначен для каркаса/тестирования.
     """
 
-    def __init__(self, root_dir: str, image_size: int = 256):
+    def __init__(self, root_dir: str, image_size: int = 256, geom_mode: str = "center_crop", resize_filter: str = "lanczos"):
         self.root = Path(root_dir)
         self.paths: List[Path] = []
         exts = {".jpg", ".jpeg", ".png", ".bmp"}
@@ -39,6 +43,8 @@ class SimpleColorizationDataset(Dataset):
                 if p.suffix.lower() in exts:
                     self.paths.append(p)
         self.image_size = image_size
+        self.geom_mode = (geom_mode or "center_crop").lower()
+        self.resize_filter = (resize_filter or "lanczos")
 
     def __len__(self):
         return len(self.paths)
@@ -46,8 +52,14 @@ class SimpleColorizationDataset(Dataset):
     def __getitem__(self, idx: int):
         path = self.paths[idx]
         img = Image.open(path).convert("RGB")
-        # Без искажения аспекта: масштаб по короткой стороне до image_size и центр-кроп
-        img = resize_shorter_side_and_center_crop(img, self.image_size)
+        # Геометрия по выбору (по умолчанию center_crop)
+        mode = self.geom_mode
+        if mode == "random_resized_crop":
+            img = random_resized_crop(img, self.image_size, resample=self.resize_filter)
+        elif mode == "random_crop":
+            img = resize_shorter_side_then_random_crop(img, self.image_size, resample=self.resize_filter)
+        else:
+            img = resize_shorter_side_and_center_crop(img, self.image_size, resample=self.resize_filter)
         arr = np.array(img)
         lab = rgb_to_lab(arr)
         Ln, ab = to_L_and_ab(lab)

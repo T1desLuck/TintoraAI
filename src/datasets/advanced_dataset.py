@@ -47,6 +47,9 @@ class AdvancedColorizationDataset(Dataset):
         aug_flip: float = 0.5,
         aug_crop_scale: Tuple[float, float] = (0.8, 1.0),
         aug_ab_jitter: float = 0.05,
+        geom_mode_train: str = "random_crop",
+        geom_mode_val: str = "center_crop",
+        resize_filter: str = "lanczos",
     ):
         self.root = Path(root_dir)
         self.paths: List[Path] = []
@@ -62,6 +65,10 @@ class AdvancedColorizationDataset(Dataset):
         self.aug_ab_jitter = aug_ab_jitter
         # Дополнительные аугментации мелких дефектов для L-канала (Ln), dict из YAML
         self.aug_defects: Optional[dict] = None
+        # Геометрия/ресайз
+        self.geom_mode_train = (geom_mode_train or "random_crop").lower()
+        self.geom_mode_val = (geom_mode_val or "center_crop").lower()
+        self.resize_filter = (resize_filter or "lanczos")
 
     def __len__(self):
         return len(self.paths)
@@ -74,14 +81,22 @@ class AdvancedColorizationDataset(Dataset):
         path = self.paths[idx]
         img = self._load_image(path)
         if self.train:
-            # Аугментации для обучения
-            # Сначала пропорциональный ресайз по короткой стороне >= size, затем случайный кроп size x size
-            img = resize_shorter_side_then_random_crop(img, self.image_size)
+            mode = self.geom_mode_train
+            if mode == "random_resized_crop":
+                img = random_resized_crop(img, self.image_size, scale=self.aug_crop_scale, resample=self.resize_filter)
+            elif mode == "center_crop":
+                img = resize_shorter_side_and_center_crop(img, self.image_size, resample=self.resize_filter)
+            else:  # default random_crop
+                img = resize_shorter_side_then_random_crop(img, self.image_size, resample=self.resize_filter)
             img = random_horizontal_flip(img, self.aug_flip)
         else:
-            # Детерминированная подготовка на валидации без искажений аспекта:
-            # resize по короткой стороне до image_size + center-crop image_size x image_size
-            img = resize_shorter_side_and_center_crop(img, self.image_size)
+            mode = self.geom_mode_val
+            if mode == "random_resized_crop":
+                img = random_resized_crop(img, self.image_size, scale=self.aug_crop_scale, resample=self.resize_filter)
+            elif mode == "random_crop":
+                img = resize_shorter_side_then_random_crop(img, self.image_size, resample=self.resize_filter)
+            else:  # default center_crop
+                img = resize_shorter_side_and_center_crop(img, self.image_size, resample=self.resize_filter)
 
         arr = np.array(img)
         lab = rgb_to_lab(arr)

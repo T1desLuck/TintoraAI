@@ -13,7 +13,29 @@ def random_horizontal_flip(img: Image.Image, p: float = 0.5) -> Image.Image:
     return img
 
 
-def random_resized_crop(img: Image.Image, size: int, scale: Tuple[float, float] = (0.8, 1.0)) -> Image.Image:
+def _resolve_resample(filter_name: str | int | None) -> int:
+    """
+    Преобразует строковое имя фильтра ресайза в константу PIL.Image.Resampling.
+    Поддерживаемые значения (регистронезависимо): "lanczos" (по умолчанию), "bicubic", "bilinear", "nearest".
+    Также допускается передача уже готовой константы PIL (int).
+    """
+    if isinstance(filter_name, int):
+        return filter_name
+    name = (filter_name or "lanczos").strip().lower()
+    # Совместимость с PIL>=9: константы доступны как Image.LANCZOS и т.д.
+    if name in ("lanczos", "l"):  # default
+        return Image.LANCZOS
+    if name in ("bicubic", "cubic"):
+        return Image.BICUBIC
+    if name in ("bilinear", "linear"):
+        return Image.BILINEAR
+    if name in ("nearest", "nn"):
+        return Image.NEAREST
+    # fallback
+    return Image.LANCZOS
+
+
+def random_resized_crop(img: Image.Image, size: int, scale: Tuple[float, float] = (0.8, 1.0), resample: str | int | None = None) -> Image.Image:
     """
     Случайно вырезает КВАДРАТНУЮ область с площадью из `scale * (w*h)` и
     изменяет размер результата до `size x size` с высоким качеством (LANCZOS).
@@ -22,6 +44,7 @@ def random_resized_crop(img: Image.Image, size: int, scale: Tuple[float, float] 
     w, h = img.size
     area = w * h
     side_max = min(w, h)
+    res = _resolve_resample(resample)
     for _ in range(10):
         target_area = random.uniform(*scale) * area
         side = int(round(target_area ** 0.5))  # квадратная область
@@ -30,13 +53,13 @@ def random_resized_crop(img: Image.Image, size: int, scale: Tuple[float, float] 
             x1 = random.randint(0, w - side)
             y1 = random.randint(0, h - side)
             img_sq = img.crop((x1, y1, x1 + side, y1 + side))
-            return img_sq.resize((size, size), Image.LANCZOS)
+            return img_sq.resize((size, size), res)
     # Fallback: центр-кроп квадрата по короткой стороне, затем ресайз
     side = side_max
     left = (w - side) // 2
     top = (h - side) // 2
     img_sq = img.crop((left, top, left + side, top + side))
-    return img_sq.resize((size, size), Image.LANCZOS)
+    return img_sq.resize((size, size), res)
 
 
 def color_jitter_lab(ab: np.ndarray, jitter: float = 0.05) -> np.ndarray:
@@ -53,7 +76,7 @@ def color_jitter_lab(ab: np.ndarray, jitter: float = 0.05) -> np.ndarray:
     return out
 
 
-def resize_shorter_side_and_center_crop(img: Image.Image, size: int) -> Image.Image:
+def resize_shorter_side_and_center_crop(img: Image.Image, size: int, resample: str | int | None = None) -> Image.Image:
     """
     Масштабирует изображение пропорционально так, чтобы КОРОТКАЯ сторона стала `size`,
     затем делает центр-кроп `size x size`. Использует LANCZOS для даунскейла.
@@ -62,6 +85,7 @@ def resize_shorter_side_and_center_crop(img: Image.Image, size: int) -> Image.Im
     w, h = img.size
     if w == 0 or h == 0:
         return img
+    res = _resolve_resample(resample)
     # масштабирование по короткой стороне
     if w < h:
         new_w = size
@@ -69,14 +93,14 @@ def resize_shorter_side_and_center_crop(img: Image.Image, size: int) -> Image.Im
     else:
         new_h = size
         new_w = int(round(w * (size / h)))
-    img_resized = img.resize((new_w, new_h), Image.LANCZOS)
+    img_resized = img.resize((new_w, new_h), res)
     # центр-кроп до size x size
     left = max(0, (new_w - size) // 2)
     top = max(0, (new_h - size) // 2)
     return img_resized.crop((left, top, left + size, top + size))
 
 
-def resize_shorter_side_then_random_crop(img: Image.Image, size: int) -> Image.Image:
+def resize_shorter_side_then_random_crop(img: Image.Image, size: int, resample: str | int | None = None) -> Image.Image:
     """
     Сначала пропорционально масштабирует изображение так, чтобы короткая сторона стала >= size,
     затем делает СЛУЧАЙНЫЙ кроп `size x size`. Это исключает искажение аспекта, но добавляет вариативность.
@@ -84,6 +108,7 @@ def resize_shorter_side_then_random_crop(img: Image.Image, size: int) -> Image.I
     w, h = img.size
     if w == 0 or h == 0:
         return img
+    res = _resolve_resample(resample)
     # Масштаб до такой степени, чтобы обе стороны были >= size
     if w < h:
         new_w = size
@@ -91,7 +116,7 @@ def resize_shorter_side_then_random_crop(img: Image.Image, size: int) -> Image.I
     else:
         new_h = size
         new_w = max(size, int(round(w * (size / h))))
-    img_resized = img.resize((new_w, new_h), Image.LANCZOS)
+    img_resized = img.resize((new_w, new_h), res)
     # Случайный кроп size x size внутри увеличенного изображения
     max_x = new_w - size
     max_y = new_h - size
