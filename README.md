@@ -160,6 +160,30 @@ ConvNeXt‑Tiny  →  CoAtNet‑light  →  Geometry‑Aware Transformer
 
 См. пример значений в `configs/default.yaml`.
 
+### Геометрия препроцессинга и интерполяция (resize)
+Для гибкого управления подготовкой изображений добавлены параметры в секции `training.geometry` и `training.resize`:
+
+```yaml
+training:
+  image_size: 256
+  geometry:
+    train_mode: random_crop        # random_crop | center_crop | random_resized_crop
+    val_mode: center_crop          # center_crop | random_crop | random_resized_crop
+  resize:
+    filter: lanczos                # lanczos | bicubic | bilinear | nearest
+```
+
+- **train_mode/val_mode**: выбирают геометрию приведения к квадрату `image_size`.
+  - `random_crop`: пропорциональный resize по короткой стороне ≥ `image_size`, затем случайный кроп `image_size×image_size`.
+  - `center_crop`: пропорциональный resize по короткой стороне ≥ `image_size`, затем центр‑кроп.
+  - `random_resized_crop`: случайный масштаб/кроп с сохранением аспекта, затем приведение к `image_size` (использует диапазон `training.aug.crop_scale`).
+- **resize.filter**: интерполяция PIL при изменении размера. По умолчанию `lanczos` (качество выше), также доступны `bicubic`, `bilinear`, `nearest`.
+
+Эти настройки применяются консистентно во всех местах:
+- `src/datasets/advanced_dataset.py` и `src/datasets/simple_dataset.py` (обучение/валидация)
+- `src/train.py` (передача параметров в датасеты)
+- `scripts/preview_preprocessing.py` (визуальный предпросмотр той же геометрии/фильтра)
+
 ## 🔧 Требования
 - Python 3.9+
 - PyTorch 2.3.1 (см. `requirements.txt`), колёса с CUDA 12.1 доступны на Windows/Linux
