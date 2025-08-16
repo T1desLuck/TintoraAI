@@ -46,6 +46,11 @@ training:                                    # Глобальные параме
   epochs: 40                                 # Общее число эпох. Фазовый план ниже распределяет потери по эпохам.
   batch_size: 4                              # Размер батча на процесс (увеличивайте при наличии памяти).
   image_size: 256                            # Квадратный размер кроя (H=W). Должен быть кратен 8.
+  geometry:                                  # Управление геометрией подготовки
+    train_mode: random_crop                  # Режим для train: random_crop|center_crop|random_resized_crop
+    val_mode: center_crop                    # Режим для val: center_crop|random_crop|random_resized_crop
+  resize:                                    # Параметры ресайза
+    filter: lanczos                          # Фильтр интерполяции: lanczos|bicubic|bilinear|nearest
   curriculum_phase: -1                       # Начальная фаза (-1,0,1,2,3,4) — используется при ручном управлении.
   save_every_epochs: 1                       # Частота сохранения latest-чекпоинтов (в эпохах).
   validate_every_epochs: 1                   # Частота валидации (в эпохах).
