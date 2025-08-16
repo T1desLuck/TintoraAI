@@ -210,84 +210,92 @@ ConvNeXt‑Tiny  →  CoAtNet‑light  →  Geometry‑Aware Transformer
 
 ```text
 TintoraAI/
-├─ README.md                  # Общее описание проекта, ссылки и быстрый старт
-├─ INSTALL.md                 # Подробная установка
-├─ TRAINING.md                # Руководство по обучению модели
-├─ TEST.md                    # Руководство по тестированию и сценарии запуска
-├─ requirements.txt           # Зависимости проекта
-├─ main.py                    # Точка входа (при необходимости)
-├─ test_project.py            # Русскоязычный лаунчер тестов
-├─ configs/                   # Конфигурации (YAML)
-│  └─ default.yaml            # Базовая конфигурация (пути, обучение, лоссы, модель)
-├─ src/                       # Исходный код библиотеки TintoraAI
-│  ├─ __init__.py            # Инициализация пакета src
-│  ├─ train.py               # Скрипт обучения: python -m src.train --config ...
-│  ├─ inference.py           # Скрипт инференса: python -m src.inference --input ...
-│  ├─ datasets/               # Датасеты и аугментации
+├─ README.md                      # Общее описание проекта, ссылки и быстрый старт
+├─ INSTALL.md                     # Подробная установка
+├─ TRAINING.md                    # Руководство по обучению модели
+├─ TEST.md                        # Руководство по тестированию и сценарии запуска
+├─ requirements.txt               # Зависимости проекта
+├─ main.py                        # Точка входа (при необходимости)
+├─ test_project.py                # Русскоязычный лаунчер тестов
+├─ configs/                       # Конфигурации (YAML)
+│  └─ default.yaml                # Базовая конфигурация (пути, обучение, лоссы, модель)
+├─ src/                           # Исходный код библиотеки TintoraAI
+│  ├─ __init__.py                 # Инициализация пакета src
+│  ├─ train.py                    # Скрипт обучения: python -m src.train --config ...
+│  ├─ inference.py                # Скрипт инференса: python -m src.inference --input ...
+│  ├─ datasets/                   # Датасеты и аугментации
 │  │  ├─ __init__.py
-│  │  ├─ simple_dataset.py    # Простой датасет (пример)
-│  │  ├─ advanced_dataset.py  # Продвинутый датасет (используется по умолчанию)
-│  │  └─ augmentations.py     # Базовые аугментации
-│  ├─ losses/                 # Функции потерь
+│  │  ├─ simple_dataset.py        # Простой датасет (пример)
+│  │  ├─ advanced_dataset.py      # Продвинутый датасет (используется по умолчанию)
+│  │  └─ augmentations.py         # Базовые аугментации
+│  ├─ losses/                     # Функции потерь
 │  │  ├─ __init__.py
-│  │  ├─ advanced.py          # PhotometricSmoothnessLoss и др.
-│  │  ├─ basic.py             # Базовые потери (L1 и т.п.)
-│  │  ├─ perceptual.py        # Перцептуальные потери (VGG)
-│  │  ├─ gan.py               # Потери для GAN
-│  │  └─ patchnce.py          # Настройки/заготовка для SSL PatchNCE
-│  ├─ models/                 # Архитектура модели
-│  │  ├─ __init__.py         # Инициализация пакета моделей
-│  │  ├─ discriminator.py     # PatchGAN дискриминатор (фаза 4)
-│  │  ├─ guidenet.py          # Доп. сеть-подсказчик (опционально)
-│  │  ├─ tintoraai.py         # Основной класс модели TintoraAI
-│  │  ├─ backbone/            # Бэкбоны (ConvNeXt/CoAtNet/GAT)
+│  │  ├─ advanced.py              # PhotometricSmoothnessLoss и др.
+│  │  ├─ basic.py                 # Базовые потери (L1 и т.п.)
+│  │  ├─ perceptual.py            # Перцептуальные потери (VGG)
+│  │  ├─ gan.py                   # Потери для GAN
+│  │  └─ patchnce.py              # Настройки/заготовка для SSL PatchNCE
+│  ├─ models/                     # Архитектура модели
+│  │  ├─ __init__.py              # Инициализация пакета моделей
+│  │  ├─ discriminator.py         # PatchGAN дискриминатор (фаза 4)
+│  │  ├─ guidenet.py              # Доп. сеть-подсказчик (опционально)
+│  │  ├─ tintoraai.py             # Основной класс модели TintoraAI
+│  │  ├─ backbone/                # Бэкбоны (ConvNeXt/CoAtNet/GAT)
 │  │  │  ├─ __init__.py
 │  │  │  ├─ convnext_tiny.py      # Реализация ConvNeXt‑Tiny (ранний этап энкодера)
 │  │  │  ├─ convnext_wrapper.py   # Обёртка/унификация интерфейса ConvNeXt
 │  │  │  ├─ coatnet_light.py      # Лёгкий CoAtNet (Conv+Attention) для среднего уровня
 │  │  │  ├─ coatnet_wrapper.py    # Обёртка/конфигурация CoAtNet
 │  │  │  └─ gat_light.py          # Geometry‑Aware Transformer (облегчённый, глобальный контекст)
-│  │  ├─ heads/               # Головы глубины/освещённости/и т.п.
-│  │  │  ├─ __init__.py       # Инициализация пакета голов
+│  │  ├─ heads/                   # Головы глубины/освещённости/и т.п.
+│  │  │  ├─ __init__.py           # Инициализация пакета голов
 │  │  │  └─ heads.py
-│  │  ├─ crb/                 # Color Reasoning Block (CRB)
-│  │  │  ├─ __init__.py       # Инициализация пакета CRB
+│  │  ├─ crb/                     # Color Reasoning Block (CRB)
+│  │  │  ├─ __init__.py           # Инициализация пакета CRB
 │  │  │  └─ crb.py
-│  │  ├─ omm/                 # Object Memory Module (OMM)
-│  │  │  ├─ __init__.py       # Инициализация модуля памяти
-│  │  │  └─ object_memory.py  # Банк прототипов: assign (cosine/top‑k), EMA‑обновления, min_support, статистика цветов (μ/σ), чтение/запись
-│  │  └─ decoder/             # Декодер (U‑Net++)
-│  │     ├─ __init__.py       # Инициализация пакета декодера
+│  │  ├─ omm/                     # Object Memory Module (OMM)
+│  │  │  ├─ __init__.py           # Инициализация модуля памяти
+│  │  │  └─ object_memory.py      # Банк прототипов: assign (cosine/top‑k), EMA‑обновления, min_support, статистика цветов (μ/σ), чтение/запись
+│  │  └─ decoder/                 # Декодер (U‑Net++)
+│  │     ├─ __init__.py           # Инициализация пакета декодера
 │  │     └─ decoder_unetpp.py
-│  └─ utils/                  # Утилиты и вспомогательные модули
+│  └─ utils/                      # Утилиты и вспомогательные модули
 │     ├─ __init__.py
-│     ├─ balancer.py          # Альтернативный балансировщик потерь
-│     ├─ config.py            # Утилиты для работы с конфигами
-│     ├─ dist.py              # Вспомогательные функции для DDP/распределёнки
-│     ├─ dlb.py               # DynamicLossBalancer
-│     ├─ lab_color.py         # Преобразования Lab/RGB
-│     ├─ metrics.py           # Метрики (SSIM/LPIPS)
-│     └─ seed.py              # Фиксация сидов/детерминизм
-├─ tests/                     # Набор автотестов (pytest)
-│  ├─ test_dlb.py             # Тесты балансировщика потерь
-│  ├─ test_forward.py         # Быстрый прогон forward модели
-│  ├─ test_inference.py       # Тесты инференса (single/tiled)
-│  ├─ test_losses.py          # Тесты лоссов (advanced и др.)
-│  └─ test_modules.py         # Модули: backbone/heads/CRB/decoder
-├─ data/                      # [Папка-плейсхолдер] Данные (создайте вручную)
-│  ├─ train/                  # Обучающие изображения (jpg/png) без подпапок
-│  ├─ val/                    # Валидационные изображения
-│  └─ test/                   # Тестовые изображения (опционально)
-├─ checkpoints/               # [Папка-плейсхолдер] Чекпоинты моделей (*.pth)
-├─ logs/                      # [Папка-плейсхолдер] Логи (TensorBoard, тексты)
-└─ experiments/               # [Папка-плейсхолдер] Эксперименты/визуализации
-   └─ exp_default/            # Каталог эксперимента по умолчанию
+│     ├─ balancer.py              # Альтернативный балансировщик потерь
+│     ├─ config.py                # Утилиты для работы с конфигами
+│     ├─ dist.py                  # Вспомогательные функции для DDP/распределёнки
+│     ├─ dlb.py                   # DynamicLossBalancer
+│     ├─ lab_color.py             # Преобразования Lab/RGB
+│     ├─ metrics.py               # Метрики (SSIM/LPIPS)
+│     └─ seed.py                  # Фиксация сидов/детерминизм
+├─ tests/                         # Набор автотестов (pytest)
+│  ├─ test_dlb.py                 # Тесты балансировщика потерь
+│  ├─ test_forward.py             # Быстрый прогон forward модели
+│  ├─ test_inference.py           # Тесты инференса (single/tiled)
+│  ├─ test_losses.py              # Тесты лоссов (advanced и др.)
+│  └─ test_modules.py             # Модули: backbone/heads/CRB/decoder
+├─ scripts/                       # Утилиты/скрипты
+│  └─ preview_preprocessing.py    # Предпросмотр подготовки изображения (Lab, L‑канал, дефекты)
+├─ data/                          # [Папка-плейсхолдер] Данные (создайте вручную)
+│  ├─ train/                      # Обучающие изображения (jpg/png) без подпапок
+│  ├─ val/                        # Валидационные изображения
+│  └─ test/                       # Тестовые изображения (опционально)
+├─ checkpoints/                   # [Папка-плейсхолдер] Чекпоинты моделей (*.pth)
+├─ logs/                          # [Папка-плейсхолдер] Логи (TensorBoard, тексты)
+└─ experiments/                   # [Папка-плейсхолдер] Эксперименты/визуализации
+   └─ exp_default/                # Каталог эксперимента по умолчанию
 ```
 
 Примечания:
 - Плейсхолдер‑папки (`data/`, `checkpoints/`, `logs/`, `experiments/…`) создаются пользователем локально — они не версионируются, если пустые.
 - Пути по умолчанию настраиваются в `configs/default.yaml` секция `paths.*`.
 - Для инференса минимум нужен вход (`--input`), конфиг и (обычно) чекпоинт из `checkpoints/`.
+
+Дополнительно — предпросмотр подготовки изображений:
+- Скрипт `scripts/preview_preprocessing.py` позволяет визуально проверить пайплайн подготовки (resize/crop/flip, перевод в Lab, сохранение L‑канала) и опциональные L‑дефекты.
+- Удобнее запускать через лаунчер: `python test_project.py preview --input assets/color.jpg --save_L --enable_defects`.
+- Выходные файлы сохраняются в `experiments/exp_default/preview_preprocess` (или папку, указанную флагом `--output`).
+ - Конфиг дефектов: блок `training.aug.defects` в `configs/default.yaml`. По умолчанию выключено (`enabled: false`); активация через флаг `--enable_defects`.
 
 ## 🧪 Тесты
 
