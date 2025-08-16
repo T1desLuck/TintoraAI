@@ -74,6 +74,10 @@ def main():
     train_dir = paths_cfg.get("train_dir", os.path.join(data_root, data_cfg.get("train_dir", "train")))
     val_dir = paths_cfg.get("val_dir", os.path.join(data_root, data_cfg.get("val_dir", "val")))
     image_size = train_cfg.get("image_size", 256)
+    geom_cfg = train_cfg.get("geometry", {})
+    geom_train_mode = str(geom_cfg.get("train_mode", "random_crop")).lower()
+    geom_val_mode = str(geom_cfg.get("val_mode", "center_crop")).lower()
+    resize_filter = str(train_cfg.get("resize", {}).get("filter", "lanczos")).lower()
     use_adv = (train_cfg.get("dataset", "advanced") == "advanced")
     if use_adv:
         aug = train_cfg.get("aug", {})
@@ -84,11 +88,19 @@ def main():
             aug_flip=float(aug.get("flip_p", 0.5)),
             aug_crop_scale=tuple(aug.get("crop_scale", [0.8, 1.0])),
             aug_ab_jitter=float(aug.get("ab_jitter", 0.05)),
+            geom_mode_train=geom_train_mode,
+            geom_mode_val=geom_val_mode,
+            resize_filter=resize_filter,
         )
         # Передаём конфиг мелких дефектов L-канала (если указан)
         ds.aug_defects = aug.get("defects", None)
     else:
-        ds = SimpleColorizationDataset(train_dir, image_size=image_size)
+        ds = SimpleColorizationDataset(
+            train_dir,
+            image_size=image_size,
+            geom_mode=geom_train_mode,
+            resize_filter=resize_filter,
+        )
     if len(ds) == 0:
         print(f"Изображения не найдены в {train_dir}. Добавьте изображения, чтобы начать обучение.")
         return
@@ -108,10 +120,22 @@ def main():
     do_val = bool(val_cfg.get("enabled", True)) and Path(val_dir).exists()
     if do_val:
         if use_adv:
-            ds_val = AdvancedColorizationDataset(val_dir, image_size=image_size, train=False)
+            ds_val = AdvancedColorizationDataset(
+                val_dir,
+                image_size=image_size,
+                train=False,
+                geom_mode_train=geom_train_mode,
+                geom_mode_val=geom_val_mode,
+                resize_filter=resize_filter,
+            )
         else:
             from .datasets import SimpleColorizationDataset as _S
-            ds_val = _S(val_dir, image_size=image_size)
+            ds_val = _S(
+                val_dir,
+                image_size=image_size,
+                geom_mode=geom_val_mode,
+                resize_filter=resize_filter,
+            )
         val_sampler = DistributedSampler(ds_val, shuffle=False) if ddp_enabled else None
         dl_val = DataLoader(
             ds_val,
