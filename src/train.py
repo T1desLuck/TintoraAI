@@ -85,6 +85,8 @@ def main():
             aug_crop_scale=tuple(aug.get("crop_scale", [0.8, 1.0])),
             aug_ab_jitter=float(aug.get("ab_jitter", 0.05)),
         )
+        # Передаём конфиг мелких дефектов L-канала (если указан)
+        ds.aug_defects = aug.get("defects", None)
     else:
         ds = SimpleColorizationDataset(train_dir, image_size=image_size)
     if len(ds) == 0:
