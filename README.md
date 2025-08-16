@@ -17,7 +17,7 @@
 [![CUDA](https://img.shields.io/badge/CUDA-12.1-76B900?style=for-the-badge&logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-downloads)
 [![OS](https://img.shields.io/badge/OS-Linux-0078D6?style=for-the-badge&logo=linux&logoColor=white)](https://www.kernel.org/)
 [![GitHub Forks](https://img.shields.io/github/forks/T1desLuck/TintoraAI?style=for-the-badge&logo=github&logoColor=white)](https://github.com/T1desLuck/TintoraAI/network/members)
-![Made in Kazakhstan](https://img.shields.io/badge/MADE-IN-Kazakhstan-00BFFF?style=for-the-badge)
+![Made in Kazakhstan](https://img.shields.io/badge/MADE%20IN-KAZAKHSTAN-00BFFF?style=for-the-badge&labelColor=FFD700)
 [![CI Status](https://img.shields.io/github/actions/workflow/status/T1desLuck/TintoraAI/python-app.yml?branch=main&style=for-the-badge)](https://github.com/T1desLuck/TintoraAI/actions/workflows/python-app.yml)
 
 </div>
