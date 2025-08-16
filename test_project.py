@@ -25,6 +25,9 @@
 from __future__ import annotations
 import sys
 import argparse
+import os
+import subprocess
+from pathlib import Path
 from typing import List, Dict
 
 try:
@@ -55,6 +58,7 @@ def show_help() -> None:
             "help": "Показать подробную справку по использованию лаунчера.",
             "list": "Показать доступные цели (алиасы) с описаниями.",
             "run <цель>": "Запустить тесты по выбранной цели или конкретный тест (через ::).",
+            "preview [опции]": "Сохранить предпросмотр подготовки изображения (включая L-дефекты).",
         },
         "targets": {
             "all": "Запускает полный набор тестов (вся папка tests/).",
@@ -88,6 +92,7 @@ def show_help() -> None:
     lines.append("Примеры (консоль):")
     lines.append("  python test_project.py run modules")
     lines.append("  python test_project.py run modules::test_crb")
+    lines.append("  python test_project.py preview --input assets/color.jpg --save_L --enable_defects")
     lines.append("")
     lines.append("Примеры (Jupyter/Colab):")
     lines.append("  from test_project import run, show_help, list_targets")
@@ -148,6 +153,66 @@ def _run_pytest(targets: List[str]) -> int:
         return int(getattr(e, "code", 1))
 
 
+def _run_preview(argv_rest: List[str]) -> int:
+    """Запуск предпросмотра подготовки изображений без PyTest.
+
+    Прокидывает PYTHONPATH и вызывает scripts/preview_preprocessing.py с переданными флагами.
+    """
+    repo_root = Path(__file__).resolve().parent
+    script = repo_root / "scripts" / "preview_preprocessing.py"
+    if not script.exists():
+        print(f"[ОШИБКА] Не найден скрипт предпросмотра: {script}")
+        return 2
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+
+    # Разбираем опции предпросмотра
+    p = argparse.ArgumentParser(prog="test_project.py preview", add_help=True)
+    p.add_argument("--input", required=True, help="Путь к входному RGB изображению")
+    p.add_argument("--config", default=str(repo_root / "configs" / "default.yaml"))
+    p.add_argument("--mode", choices=["train", "val"], default="train")
+    p.add_argument("--dataset", choices=["advanced", "simple"], default=None)
+    p.add_argument("--output", default=None, help="Выходная папка для превью")
+    p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--disable_flip", action="store_true")
+    p.add_argument("--disable_jitter", action="store_true")
+    p.add_argument("--save_L", action="store_true")
+    p.add_argument("--enable_defects", action="store_true")
+    ns = p.parse_args(argv_rest)
+
+    cmd = [
+        sys.executable,
+        str(script),
+        "--input", ns.input,
+        "--config", ns.config,
+        "--mode", ns.mode,
+    ]
+    if ns.dataset is not None:
+        cmd += ["--dataset", ns.dataset]
+    if ns.output is not None:
+        cmd += ["--output", ns.output]
+    cmd += ["--seed", str(ns.seed)]
+    if ns.disable_flip:
+        cmd.append("--disable_flip")
+    if ns.disable_jitter:
+        cmd.append("--disable_jitter")
+    if ns.save_L:
+        cmd.append("--save_L")
+    if ns.enable_defects:
+        cmd.append("--enable_defects")
+
+    print("[ИНФО] Предпросмотр подготовки изображения…")
+    print("Команда:", " ".join(cmd))
+    try:
+        subprocess.run(cmd, check=True, env=env, cwd=repo_root)
+        print("[УСПЕХ] Предпросмотр выполнен. Файлы сохранены в указанную папку.")
+        return 0
+    except subprocess.CalledProcessError as e:
+        print(f"[НЕУСПЕХ] Предпросмотр завершился с ошибкой (код {e.returncode}). См. лог выше.")
+        return int(e.returncode or 1)
+
+
 def run(target: str) -> bool:
     """Публичная функция для Jupyter/Colab: запускает тест(ы) по цели и печатает результат на русском.
 
@@ -171,6 +236,8 @@ def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("command", nargs="?", default="help")
     parser.add_argument("arg", nargs="?")
+    # Остальные аргументы передаются в подкоманды (например, preview)
+    parser.add_argument("rest", nargs=argparse.REMAINDER)
     ns = parser.parse_args(argv)
 
     if ns.command in ("help", "--help", "-h"):
@@ -194,6 +261,11 @@ def main(argv: List[str] | None = None) -> int:
                 "Подсказка: сузьте запуск до конкретного теста, например: modules::test_crb"
             )
         return code
+    if ns.command == "preview":
+        # Передаём оставшиеся аргументы парсеру предпросмотра
+        # ns.rest включает ведущий "--" если пользователь вставил его; удалим его.
+        rest = [a for a in ns.rest if a != "--"]
+        return _run_preview(rest)
 
     print(f"[ОШИБКА] Неизвестная команда: {ns.command}\nИспользуйте: help | list | run <цель>")
     return 2
