@@ -52,10 +52,11 @@
 
 - Поддерживаемые расширения: `.jpg`, `.jpeg`, `.png`, `.bmp` (см. `src/datasets/advanced_dataset.py`, `simple_dataset.py`).
 - Достаточно ТОЛЬКО эталонных цветных изображений. Парных «серых» или «деградированных» копий не нужно — они синтезируются в процессе чтения.
-- Размеры исходников произвольные. На обучении кадры приводятся к квадрату `training.image_size` (по умолчанию `256`, должен быть кратен 8):
-  - train: `random_resized_crop` в диапазоне `training.aug.crop_scale` + `random_horizontal_flip` с вероятностью `training.aug.flip_p`.
-  - val: детерминированный `resize` до `image_size` (бикубическая интерполяция в `PIL.Image.BILINEAR`).
-  - simple‑dataset: всегда `resize` до `image_size`.
+- Размеры исходников произвольные. На обучении и валидации кадры приводятся к квадрату `training.image_size` (по умолчанию `256`, рекомендуется кратность 8) по правилам геометрии из конфига:
+  - train: режим задаётся `training.geometry.train_mode` (`random_crop` | `center_crop` | `random_resized_crop`) + `random_horizontal_flip` с вероятностью `training.aug.flip_p`.
+  - val: режим задаётся `training.geometry.val_mode` (обычно `center_crop` для детерминированности).
+  - Во всех режимах интерполяция берётся из `training.resize.filter` (`lanczos` | `bicubic` | `bilinear` | `nearest`).
+  - simple‑dataset: использует те же режимы геометрии, но без продвинутых аугментаций.
 - Цветовое пространство: вход RGB → Lab; яркость `L` нормируется в `[-1, 1]`, каналы `ab` — целевые для обучения (функции `rgb_to_lab()` и `to_L_and_ab()`).
 - Рекомендуется разнообразие сцен/объектов и достаточное разрешение; монохромные исходники допустимы, но не информативны по цвету.
 
@@ -127,6 +128,34 @@ echo "Валидационных изображений: $(ls data/val | wc -l)"
 - `validation`: `enabled`, `batch_size`, `ssim_window`, `lpips`
 - `logging`: TensorBoard/W&B
 - `checkpointing`: политика и имена `latest`/`best`
+
+### Геометрия препроцессинга и интерполяция (resize)
+Чтобы единообразно управлять подготовкой изображений, используйте параметры ниже в `configs/default.yaml`:
+
+```yaml
+training:
+  image_size: 256
+  geometry:
+    train_mode: random_crop        # random_crop | center_crop | random_resized_crop
+    val_mode: center_crop          # center_crop | random_crop | random_resized_crop
+  resize:
+    filter: lanczos                # lanczos | bicubic | bilinear | nearest
+```
+
+- **image_size**: итоговый квадратный размер кропа. Увеличение до 512 повышает требования к VRAM — уменьшайте `training.batch_size`.
+- **train_mode/val_mode**: выбирают логику приведения к квадрату без искажений аспекта (см. `src/datasets/augmentations.py`).
+- **resize.filter**: выбирает интерполяцию PIL; по умолчанию `lanczos` для качества при даунскейле.
+
+Предпросмотр этих настроек без запуска обучения:
+```bash
+# Скрипт предпросмотра
+python scripts/preview_preprocessing.py --input assets/color.jpg --save_L --enable_defects \
+  --config configs/default.yaml --output experiments/exp_default/preview_preprocessing
+
+# Или через лаунчер
+python test_project.py preview --input assets/color.jpg --save_L --enable_defects \
+  --output experiments/exp_default/preview_from_launcher
+```
 
 ## 🚀 Запуск обучения
 

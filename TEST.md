@@ -65,11 +65,7 @@ python test_project.py run modules::test_crb
 - `run <цель>` — запуск тестов по выбранной цели. Поддерживаются точечные тесты с `::`.
 
 Дополнительно:
-- `preview [опции]` — сохраняет предпросмотр подготовки изображения без запуска PyTest. Читает `configs/default.yaml`, учитывает `training.aug.defects` при флаге `--enable_defects`. Пример:
-  ```bash
-  python test_project.py preview --input assets/color.jpg --save_L --enable_defects \
-    --output experiments/exp_default/preview_from_launcher
-  ```
+- `preview [опции]` — сохраняет предпросмотр подготовки изображения без запуска PyTest. Читает `configs/default.yaml`. См. раздел «Предпросмотр препроцессинга» ниже для примера.
 
 В Jupyter/Colab:
 ```python
@@ -95,6 +91,25 @@ run("modules::test_crb")
 - Любой `test_*` внутри `tests/test_modules.py` или других файлов.
 
 Синтаксис общий для PyTest: `<файл или алиас>::<имя_теста>`.
+
+## Предпросмотр препроцессинга
+Скрипты предпросмотра применяют те же шаги, что и датасеты (`advanced/simple`):
+- Геометрия: `training.geometry.train_mode|val_mode`
+- Размер: `training.image_size`
+- Интерполяция: `training.resize.filter` (lanczos/bicubic/bilinear/nearest)
+- Аугментации: `training.aug.flip_p`, `training.aug.crop_scale`, `training.aug.ab_jitter`, мелкие L‑дефекты при `--enable_defects` читаются из `training.aug.defects`
+
+Пример (лаунчер):
+```bash
+python test_project.py preview --input assets/color.jpg --save_L --enable_defects \
+  --output experiments/exp_default/preview_from_launcher
+```
+
+Прямой вызов скрипта:
+```bash
+python scripts/preview_preprocessing.py --input assets/color.jpg --save_L --enable_defects \
+  --config configs/default.yaml --output experiments/exp_default/preview_preprocessing
+```
 
 ## Что проверяют тестовые файлы
 - `tests/test_dlb.py`
@@ -130,11 +145,7 @@ run("modules::test_crb")
   ```bash
   python test_project.py run all
   ```
-- Быстро посмотреть, как подготовка изображения (включая L‑дефекты) повлияет на входы модели:
-  ```bash
-  python test_project.py preview --input assets/color.jpg --save_L --enable_defects
-  # Файлы появятся в experiments/exp_default/preview_preprocess (или указанной папке)
-  ```
+- Перед предпросмотром убедитесь, что в `configs/default.yaml` корректно выставлены `training.image_size`, `training.geometry.*` и `training.resize.filter`.
 
 ## Подсказки и устранение неполадок
 - **Кодировка в Windows:** если русские буквы отображаются некорректно — это не влияет на выполнение тестов. Можно сменить шрифт/кодировку консоли или использовать терминал, поддерживающий UTF‑8.
