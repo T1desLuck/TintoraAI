@@ -7,7 +7,14 @@ import torch
 from torch.utils.data import Dataset
 from skimage import color
 
-from .augmentations import random_horizontal_flip, random_resized_crop, color_jitter_lab
+from .augmentations import (
+    random_horizontal_flip,
+    random_resized_crop,
+    color_jitter_lab,
+    resize_shorter_side_and_center_crop,
+    resize_shorter_side_then_random_crop,
+    augment_L_defects,
+)
 
 
 def rgb_to_lab(img: np.ndarray) -> np.ndarray:
@@ -53,6 +60,8 @@ class AdvancedColorizationDataset(Dataset):
         self.aug_flip = aug_flip
         self.aug_crop_scale = aug_crop_scale
         self.aug_ab_jitter = aug_ab_jitter
+        # Дополнительные аугментации мелких дефектов для L-канала (Ln), dict из YAML
+        self.aug_defects: Optional[dict] = None
 
     def __len__(self):
         return len(self.paths)
@@ -66,15 +75,20 @@ class AdvancedColorizationDataset(Dataset):
         img = self._load_image(path)
         if self.train:
             # Аугментации для обучения
-            img = random_resized_crop(img, self.image_size, self.aug_crop_scale)
+            # Сначала пропорциональный ресайз по короткой стороне >= size, затем случайный кроп size x size
+            img = resize_shorter_side_then_random_crop(img, self.image_size)
             img = random_horizontal_flip(img, self.aug_flip)
         else:
-            # Детерминированное изменение размера на валидации
-            img = img.resize((self.image_size, self.image_size), Image.BILINEAR)
+            # Детерминированная подготовка на валидации без искажений аспекта:
+            # resize по короткой стороне до image_size + center-crop image_size x image_size
+            img = resize_shorter_side_and_center_crop(img, self.image_size)
 
         arr = np.array(img)
         lab = rgb_to_lab(arr)
         Ln, ab = to_L_and_ab(lab)
+        # Мелкие огрехи только при обучении (L-канал)
+        if self.train and self.aug_defects:
+            Ln = augment_L_defects(Ln, self.aug_defects)
         if self.train and self.aug_ab_jitter > 0:
             # Лёгкая цветовая джиттер-аугментация в Lab (только ab)
             ab = color_jitter_lab(ab, jitter=self.aug_ab_jitter)

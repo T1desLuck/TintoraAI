@@ -1,3 +1,4 @@
+from .augmentations import resize_shorter_side_and_center_crop
 from pathlib import Path
 from typing import Tuple, List
 import torch
@@ -44,7 +45,9 @@ class SimpleColorizationDataset(Dataset):
 
     def __getitem__(self, idx: int):
         path = self.paths[idx]
-        img = Image.open(path).convert("RGB").resize((self.image_size, self.image_size), Image.BILINEAR)
+        img = Image.open(path).convert("RGB")
+        # Без искажения аспекта: масштаб по короткой стороне до image_size и центр-кроп
+        img = resize_shorter_side_and_center_crop(img, self.image_size)
         arr = np.array(img)
         lab = rgb_to_lab(arr)
         Ln, ab = to_L_and_ab(lab)
