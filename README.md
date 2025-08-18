@@ -5,26 +5,49 @@
     <td width="50%" align="center">
       <img src="assets/tintorai_logo.png" alt="TintoraAI Logo" width="300"/>
     </td>
-    <td width="50%" align="left">
+    <td width="50%" align="left" valign="middle">
+
       <h3>Превращайте черно-белые изображения в яркие цветные с помощью ИИ</h3>
       <p>Умная колоризация • Гибкая настройка</p>
 
       <p>
-        <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white"/></a>
-        <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-%3E%3D1.9.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white"/></a>
-        <a href="https://github.com/T1desLuck/TintoraAI.git"><img src="https://img.shields.io/badge/Версия-2.0.3-4CAF50?style=for-the-badge"/></a>
-        <a href="https://github.com/T1desLuck/TintoraAI/blob/main/LICENSE"><img src="https://img.shields.io/badge/Лицензия-MIT-007ACC?style=for-the-badge"/></a>
-        <a href="https://colab.research.google.com/gist/T1desLuck/2c599c68aa99e88308a2d5b0f79af634/tintoraai.ipynb"><img src="https://img.shields.io/badge/Open%20in-Colab-orange?style=for-the-badge&logo=googlecolab&logoColor=white"/></a>
-        <a href="https://github.com/T1desLuck/TintoraAI"><img src="https://img.shields.io/github/repo-size/T1desLuck/TintoraAI?style=for-the-badge"/></a>
-        <a href="https://developer.nvidia.com/cuda-downloads"><img src="https://img.shields.io/badge/CUDA-12.1-76B900?style=for-the-badge&logo=nvidia&logoColor=white"/></a>
-        <a href="https://www.kernel.org/"><img src="https://img.shields.io/badge/OS-Linux-0078D6?style=for-the-badge&logo=linux&logoColor=white"/></a>
-        <a href="https://github.com/T1desLuck/TintoraAI/network/members"><img src="https://img.shields.io/github/forks/T1desLuck/TintoraAI?style=for-the-badge&logo=github&logoColor=white"/></a>
+        <a href="https://www.python.org/">
+          <img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
+        </a>
+        <a href="https://pytorch.org/">
+          <img src="https://img.shields.io/badge/PyTorch-%3E%3D1.9.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white"/>
+        </a>
+        <a href="https://github.com/T1desLuck/TintoraAI.git">
+          <img src="https://img.shields.io/badge/Версия-2.0.3-4CAF50?style=for-the-badge"/>
+        </a>
+        <a href="https://github.com/T1desLuck/TintoraAI/blob/main/LICENSE">
+          <img src="https://img.shields.io/badge/Лицензия-MIT-007ACC?style=for-the-badge"/>
+        </a>
+        <a href="https://colab.research.google.com/gist/T1desLuck/2c599c68aa99e88308a2d5b0f79af634/tintoraai.ipynb">
+          <img src="https://img.shields.io/badge/Open%20in-Colab-orange?style=for-the-badge&logo=googlecolab&logoColor=white"/>
+        </a>
+        <a href="https://github.com/T1desLuck/TintoraAI">
+          <img src="https://img.shields.io/github/repo-size/T1desLuck/TintoraAI?style=for-the-badge"/>
+        </a>
+        <a href="https://developer.nvidia.com/cuda-downloads">
+          <img src="https://img.shields.io/badge/CUDA-12.1-76B900?style=for-the-badge&logo=nvidia&logoColor=white"/>
+        </a>
+        <a href="https://www.kernel.org/">
+          <img src="https://img.shields.io/badge/OS-Linux-0078D6?style=for-the-badge&logo=linux&logoColor=white"/>
+        </a>
+        <a href="https://github.com/T1desLuck/TintoraAI/network/members">
+          <img src="https://img.shields.io/github/forks/T1desLuck/TintoraAI?style=for-the-badge&logo=github&logoColor=white"/>
+        </a>
         <img src="https://img.shields.io/badge/MADE%20IN-KAZAKHSTAN-00BFFF?style=for-the-badge&labelColor=FFD700"/>
-        <a href="https://github.com/T1desLuck/TintoraAI/actions/workflows/python-app.yml"><img src="https://img.shields.io/github/actions/workflow/status/T1desLuck/TintoraAI/python-app.yml?branch=main&style=for-the-badge"/></a>
+        <a href="https://github.com/T1desLuck/TintoraAI/actions/workflows/python-app.yml">
+          <img src="https://img.shields.io/github/actions/workflow/status/T1desLuck/TintoraAI/python-app.yml?branch=main&style=for-the-badge"/>
+        </a>
       </p>
+
     </td>
   </tr>
 </table>
+
 
 
  TintoraAI — это современная система для интеллектуальной колоризации черно-белых изображений на PyTorch. Текущая архитектура объединяет многоэтапный энкодер (ConvNeXt‑Tiny → CoAtNet‑light → Geometry‑Aware Transformer), вспомогательные головы глубины/освещённости, модуль объектной памяти (OMM), блок цветового рассуждения (CRB) и декодер U‑Net++ с FiLM и PixelShuffle. Поддерживается поэтапное обучение (curriculum), перцептуальная потеря (VGG) для обучения и опциональный PatchGAN на поздней фазе.
