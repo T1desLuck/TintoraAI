@@ -1,19 +1,26 @@
 # TintoraAI: Продвинутая система колоризации изображений
 
-<img src="https://raw.githubusercontent.com/T1desLuck/TintoraAI/main/assets/tintorai_logo.png" alt="logo" width="220" align="left" />
+<div align="center">
+  <img src="assets/tintorai_logo.png" alt="TintoraAI Logo" width="512"/>
+  <h3>Превращайте черно-белые изображения в яркие цветные с помощью ИИ</h3>
+  <p>Умная колоризация • Гибкая настройка</p>
+</div>
 
-### Превращайте черно-белые изображения в яркие цветные с помощью ИИ
-Умная колоризация • Гибкая настройка
+<div align="center">
 
-<p>
-  <a href="https://colab.research.google.com/..."><img src="https://img.shields.io/badge/Open%20in-Colab-orange?style=for-the-badge" alt="Colab"/></a>
-  <a href="https://github.com/T1desLuck/TintoraAI"><img src="https://img.shields.io/github/repo-size/T1desLuck/TintoraAI?style=for-the-badge" alt="repo"/></a>
-</p>
+[![Python Version](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-%3E%3D1.9.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Version](https://img.shields.io/badge/Версия-2.0.3-4CAF50?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI.git)
+[![License](https://img.shields.io/badge/Лицензия-MIT-007ACC?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI/blob/a588a27c8a52600bb0cfbf9eff56a0291502f78e/LICENSE)
+[![Open In Colab](https://img.shields.io/badge/Open%20in-Colab-orange?style=for-the-badge&logo=googlecolab&logoColor=white)](https://colab.research.google.com/gist/T1desLuck/2c599c68aa99e88308a2d5b0f79af634/tintoraai.ipynb)
+[![Repo Size](https://img.shields.io/github/repo-size/T1desLuck/TintoraAI?style=for-the-badge)](https://github.com/T1desLuck/TintoraAI)
+[![CUDA](https://img.shields.io/badge/CUDA-12.1-76B900?style=for-the-badge&logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-downloads)
+[![OS](https://img.shields.io/badge/OS-Linux-0078D6?style=for-the-badge&logo=linux&logoColor=white)](https://www.kernel.org/)
+[![GitHub Forks](https://img.shields.io/github/forks/T1desLuck/TintoraAI?style=for-the-badge&logo=github&logoColor=white)](https://github.com/T1desLuck/TintoraAI/network/members)
+![Made in Kazakhstan](https://img.shields.io/badge/MADE%20IN-KAZAKHSTAN-00BFFF?style=for-the-badge&labelColor=FFD700)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/T1desLuck/TintoraAI/python-app.yml?branch=main&style=for-the-badge)](https://github.com/T1desLuck/TintoraAI/actions/workflows/python-app.yml)
 
-
-
-
- TintoraAI — это современная система для интеллектуальной колоризации черно-белых изображений на PyTorch. Текущая архитектура объединяет многоэтапный энкодер (ConvNeXt‑Tiny → CoAtNet‑light → Geometry‑Aware Transformer), вспомогательные головы глубины/освещённости, модуль объектной памяти (OMM), блок цветового рассуждения (CRB) и декодер U‑Net++ с FiLM и PixelShuffle. Поддерживается поэтапное обучение (curriculum), перцептуальная потеря (VGG) для обучения и опциональный PatchGAN на поздней фазе.
+</div>
 
 ## ✨ Особенности
 
