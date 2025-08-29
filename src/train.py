@@ -58,8 +58,19 @@ def main():
         init_distributed(backend)
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     device = get_device(runtime, local_rank)
+
     if torch.cuda.is_available():
-        torch.cuda.set_device(device)
+        if isinstance(device, str):
+            if device == "cuda":
+                device = torch.device("cuda:0")
+            else:
+                device = torch.device(device)
+        elif isinstance(device, int):
+            device = torch.device(f"cuda:{device}")
+    else:
+        device = torch.device("cpu")
+
+    print(f"Using device: {device}")
 
     # Логирование
     log_dir = Path(paths.get("logs", "logs"))
