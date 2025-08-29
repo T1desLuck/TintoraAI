@@ -58,19 +58,11 @@ def main():
         init_distributed(backend)
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     device = get_device(runtime, local_rank)
-
     if torch.cuda.is_available():
-        if isinstance(device, str):
-            if device == "cuda":
-                device = torch.device("cuda:0")
-            else:
-                device = torch.device(device)
-        elif isinstance(device, int):
-            device = torch.device(f"cuda:{device}")
-    else:
-        device = torch.device("cpu")
-
-    print(f"Using device: {device}")
+        # Ensure device has a specific index
+        if device.type == 'cuda' and device.index is None:
+            device = torch.device(f'cuda:{local_rank}' if torch.cuda.device_count() > 1 else 'cuda:0')
+        torch.cuda.set_device(device)
 
     # Логирование
     log_dir = Path(paths.get("logs", "logs"))
@@ -492,7 +484,7 @@ def main():
                 with torch.cuda.amp.autocast(enabled=runtime.get("amp", True)):
                     pred_fake_forG = D(rgb_pred)
                     l_adv_term = loss_gan(pred_fake_forG, True, for_discriminator=False)
-            # Сформировать базовые веса лоссов из конфигурации (для supervised)
+            # Сформировать базовые веса лоссов из конфигурации
             base_lams = {
                 "l1": lam_l1,
                 "perc": lam_perc,
@@ -503,11 +495,14 @@ def main():
                 "cluster": lam_cluster,
                 "adv": lam_adv,
             }
+            
+            # Initialize lams with base values first
+            lams = base_lams
+            
             if not is_ssl_phase:
                 if use_dlb and dynamic_balancer is not None:
                     lams = dynamic_balancer.compute_weights(base_lams)
-                else:
-                    lams = base_lams
+                # else: lams already equals base_lams
 
                 # Итоговый лосс: сумма по доступным термам
                 loss = 0.0 * l_l1
