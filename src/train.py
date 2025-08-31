@@ -30,7 +30,9 @@ from .losses import (
 from .utils.balancer import LossBalancer
 from .utils import DynamicLossBalancer
 
-
+import warnings
+warnings.filterwarnings("ignore", message=".*pretrained.*deprecated.*")
+warnings.filterwarnings("ignore", message=".*Arguments other than.*")
 
 
 
