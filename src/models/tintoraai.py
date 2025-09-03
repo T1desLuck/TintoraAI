@@ -148,8 +148,14 @@ class TintoraAI(nn.Module):
             # Если вход GuideNet меньше c3, ожидается, что GuideNet настроен под guide_feature_dim
             guide_ctx = self.guide(f3_vec)  # (B, ctx_hidden)
 
+        # По учебному плану чтение из OMM должно быть отключено до фазы 3.
+        # Когда omm_read_only=True, мы не используем память в CRB (обнуляем вклад).
+        mem_map_for_crb = mem_map
+        if omm_read_only is True:
+            mem_map_for_crb = torch.zeros_like(mem_map)
+
         film = self.crb(
-            F3n, mem_map, D, illum, normals, guide_ctx=guide_ctx
+            F3n, mem_map_for_crb, D, illum, normals, guide_ctx=guide_ctx
         )  # {gamma:(S,B,C), beta:(S,B,C)}
         x_ab, x_sat = self.decoder(F1, F2n, F3n, film["gamma"], film["beta"], (H, W))
         a, b = torch.chunk(x_ab, 2, dim=1)
