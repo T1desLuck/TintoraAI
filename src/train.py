@@ -751,7 +751,8 @@ def main():
             scaler.step(opt)
             scaler.update()
             # Step LR scheduler immediately after optimizer step to satisfy PyTorch's recommended order
-            if scheduler is not None:
+            # Also guard to ensure at least one optimizer.step() has actually occurred
+            if scheduler is not None and getattr(opt, "_step_count", 0) > 0:
                 scheduler.step()
 
             epoch_loss += loss.item()
