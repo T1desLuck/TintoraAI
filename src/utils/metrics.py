@@ -134,6 +134,10 @@ class _DISTSWrapper:
     ) -> Optional[torch.Tensor]:
         if not self.enabled or self.metric is None:
             return None
+            
+        device = img1.device
+        self.metric = self.metric.to(device)
+        
         # DISTS принимает тензоры в диапазоне [0,1]
         with torch.no_grad():
             val = self.metric(img1, img2)
