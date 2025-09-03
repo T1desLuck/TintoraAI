@@ -115,6 +115,14 @@ python -m src.train --config configs/default.yaml
 torchrun --standalone --nproc_per_node=NUM_GPUS -m src.train --config configs/default.yaml
 ```
 
+## ✅ Поведение и договорённости (аудит)
+
+- **Нормализация Lab**: датасеты отдают `L∈[-1,1]` (формула `L/50−1`), каналы `a,b` — в единицах Lab (≈ `[-128,127]`). `src/utils/lab_color.py` ожидает ровно такие диапазоны и конвертирует в RGB `[0,1]`.
+- **OMM при инференсе**: чтение из памяти включено по умолчанию (`omm_read_only=False`) в `src/inference.py`.
+- **OMM при валидации**: теперь следует учебному расписанию — в `src/train.py` валидация передаёт `omm_read_only=omm_epoch_read_only` (фаза‑зависимо).
+- **TensorBoard скаляры**: добавлены `train/phase` и `train/omm_read_only` (0/1) в конце каждой эпохи обучения.
+- **Padding на инференсе**: по умолчанию кратность `pad_divisor=32`, настраивается в `configs/default.yaml -> inference.pad_divisor` или через CLI `--pad-div`.
+
 ## 📖 Документация
 Подробное описание всех функций, настроек и примеры использования доступны в следующих документах:
 
