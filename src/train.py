@@ -401,6 +401,29 @@ def main():
         else None
     )
 
+    # Лёгкая валидация учебного плана и конфигурации (не меняет поведение, только предупреждает)
+    if cur_cfg is not None and isinstance(cur_cfg.get("phases", None), list):
+        try:
+            for seg in cur_cfg["phases"]:
+                f = int(seg.get("from", 1))
+                t = int(seg.get("to", f))
+                ph = int(seg.get("phase", 0))
+                omm_ro = seg.get("omm_read_only", None)
+                ls = seg.get("loss", {})
+                # Ожидаемые гейты по фазам согласно YAML и коду
+                if ls.get("lambda_ds", 0.0) > 0.0 and ph < 1:
+                    print(f"[WARN][cfg] lambda_ds>0 на фазе {ph} (ожидается ph>=1) эпохи {f}-{t}")
+                if ls.get("lambda_cc", 0.0) > 0.0 and ph < 3:
+                    print(f"[WARN][cfg] lambda_cc>0 на фазе {ph} (ожидается ph>=3) эпохи {f}-{t}")
+                if ls.get("lambda_cluster", 0.0) > 0.0 and ph < 3:
+                    print(f"[WARN][cfg] lambda_cluster>0 на фазе {ph} (ожидается ph>=3) эпохи {f}-{t}")
+                if ls.get("lambda_adv", 0.0) > 0.0 and ph < 4:
+                    print(f"[WARN][cfg] lambda_adv>0 на фазе {ph} (ожидается ph>=4) эпохи {f}-{t}")
+                if omm_ro is False and ph < 3:
+                    print(f"[WARN][cfg] omm_read_only=false на фазе {ph} (ожидается true до ph=3) эпохи {f}-{t}")
+        except Exception:
+            pass
+
     def apply_curriculum(epoch: int):
         nonlocal phase, lam_l1, lam_perc, lam_cc, lam_photo, lam_entropy, lam_ds, lam_cluster, lam_adv
         omm_ro = True if phase <= 0 else None
@@ -498,6 +521,10 @@ def main():
     if sched_type in {"cosine", "constant"} or warmup_steps > 0:
         scheduler = torch.optim.lr_scheduler.LambdaLR(opt, lr_lambda=_lr_lambda)
 
+    # Опциональные рантайм-проверки форм (по умолчанию выключены)
+    assertions_cfg = train_cfg.get("assertions", {})
+    assertions_enabled = bool(assertions_cfg.get("enabled", False))
+
     for epoch in range(start_epoch, epochs + 1):
         model.train()
         # ПРИМЕНЯЕМ РАСПИСАНИЕ НА НАЧАЛО ЭПОХИ
@@ -517,6 +544,26 @@ def main():
                 # OMM режим на эпоху
                 # Pass ground truth `ab` for OMM color statistics update
                 out = model(L, gt_ab=ab, omm_read_only=omm_epoch_read_only)
+
+                # Небольшие проверки форм/диапазонов (включаются только если training.assertions.enabled=true)
+                if assertions_enabled:
+                    try:
+                        # a/b формы должны совпадать и соответствовать L по H/W
+                        assert out["a"].shape == out["b"].shape, "a/b shapes mismatch"
+                        assert out["a"].shape[0] == L.shape[0], "batch mismatch"
+                        assert out["a"].shape[2:] == L.shape[2:], "spatial mismatch for a/b vs L"
+                        if "sat" in out:
+                            assert out["sat"].shape[:1] == L.shape[:1] and out["sat"].shape[2:] == L.shape[2:], "sat spatial mismatch"
+                        if "D" in out:
+                            assert out["D"].shape[:1] == L.shape[:1] and out["D"].shape[2:] == L.shape[2:], "D spatial mismatch"
+                        if "mem_map" in out:
+                            mm = out["mem_map"]
+                            assert mm.shape[0] == L.shape[0] and mm.shape[2:] == L.shape[2:], "mem_map spatial mismatch"
+                        # базовая проверка на finites
+                        for k in ("a", "b"):
+                            assert torch.isfinite(out[k]).all(), f"non-finite values in {k}"
+                    except Exception as _:
+                        print("[WARN][assert] runtime shape/range assertion failed; continue")
                 # Фаза -1: SSL PatchNCE
                 if ssl_enabled and phase <= -1:
                     # Приводим пространственные размеры F3 к F2 для парных патчей
@@ -569,7 +616,7 @@ def main():
                     l_cluster = None
                     if (
                         phase_num >= 1
-                        and loss_weights.get("color_consistency", 0) > 0.0
+                        and loss_weights.get("cc", 0) > 0.0
                     ):
                         l_cc = loss_cc(torch.cat([out["a"], out["b"]], dim=1), ab)
                     if phase >= 1 and lam_photo > 0.0:
@@ -578,9 +625,9 @@ def main():
                         l_entropy = loss_entropy(
                             out.get("sat", torch.sigmoid(out["a"]))
                         )
-                    if phase >= 3 and lam_ds > 0.0:
+                    if phase >= 1 and lam_ds > 0.0:
                         l_ds = loss_ds(L, out.get("D", torch.zeros_like(L)))
-                    if phase >= 4 and lam_cluster > 0.0:
+                    if phase >= 3 and lam_cluster > 0.0:
                         # Use OMM-projected F2 (256-D) to match mem_map channels
                         F2_omm = out.get(
                             "F2_omm",
@@ -763,6 +810,17 @@ def main():
             )
             log_msg = f"Epoch {epoch} done: loss={avg_epoch_loss:.4f} | phase={phase} | {active_losses} | omm_read_only={omm_epoch_read_only}"
             print(log_msg)
+        # Log epoch-level phase and OMM read-only state to TensorBoard
+        if writer is not None:
+            try:
+                writer.add_scalar("train/phase", phase, epoch)
+                writer.add_scalar(
+                    "train/omm_read_only",
+                    1.0 if (omm_epoch_read_only is True) else 0.0,
+                    epoch,
+                )
+            except Exception:
+                pass
 
         # Валидация
         if do_val and (epoch % int(train_cfg.get("validate_every_epochs", 1)) == 0):
@@ -776,7 +834,8 @@ def main():
                 for L, ab, _ in dl_val:
                     L = L.to(device)
                     ab = ab.to(device)
-                    out = model(L, omm_read_only=True)
+                    # Align validation with curriculum: use epoch-level OMM read-only flag
+                    out = model(L, omm_read_only=omm_epoch_read_only)
                     rgb_pred = lab_to_rgb_tensor(L, out["a"], out["b"])  # (B,3,H,W)
                     rgb_gt = lab_to_rgb_tensor(L, ab[:, :1], ab[:, 1:2])
                     ssim_vals.append(
