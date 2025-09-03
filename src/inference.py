@@ -36,7 +36,7 @@ def pad_to_divisible(x: torch.Tensor, div: int = 32) -> Tuple[torch.Tensor, Tupl
 
 @torch.no_grad()
 def colorize_single(
-    model: TintoraAI, L: torch.Tensor, omm_read_only: bool = True, pad_divisor: int = 32
+    model: TintoraAI, L: torch.Tensor, omm_read_only: bool = False, pad_divisor: int = 32
 ) -> torch.Tensor:
     Lp, pads = pad_to_divisible(L, pad_divisor)
     out = model(Lp, omm_read_only=omm_read_only)
@@ -80,7 +80,7 @@ def colorize_tiled(
     L: torch.Tensor,
     tile: int = 512,
     overlap: int = 32,
-    omm_read_only: bool = True,
+    omm_read_only: bool = False,
     pad_divisor: int = 32,
 ) -> torch.Tensor:
     # Тильная обработка с косинусным (Хэннинг) окном для бесшовного склейки
@@ -136,10 +136,10 @@ def tta_colorize(
                 Lin,
                 tile=tile,
                 overlap=overlap,
-                omm_read_only=True,
+                omm_read_only=False,
                 pad_divisor=pad_divisor,
             )
-        return colorize_single(model, Lin, omm_read_only=True, pad_divisor=pad_divisor)
+        return colorize_single(model, Lin, omm_read_only=False, pad_divisor=pad_divisor)
 
     preds = []
     # Базовый
@@ -304,12 +304,12 @@ def main() -> None:
                             L,
                             tile=int(args.tile),
                             overlap=int(args.overlap),
-                            omm_read_only=True,
+                            omm_read_only=False,
                             pad_divisor=pad_divisor,
                         )
                     else:
                         rgb = colorize_single(
-                            model, L, omm_read_only=True, pad_divisor=pad_divisor
+                            model, L, omm_read_only=False, pad_divisor=pad_divisor
                         )
 
             rgb_img = (
