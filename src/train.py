@@ -750,6 +750,9 @@ def main():
             scaler.scale(loss).backward()
             scaler.step(opt)
             scaler.update()
+            # Step LR scheduler immediately after optimizer step to satisfy PyTorch's recommended order
+            if scheduler is not None:
+                scheduler.step()
 
             epoch_loss += loss.item()
             # Обновление EMA после шага оптимизатора
@@ -800,9 +803,6 @@ def main():
                         rgb = lab_to_rgb_tensor(L, out["a"], out["b"])  # (B,3,H,W)
                         writer.add_images("train/rgb_pred", rgb, global_step)
             global_step += 1
-            # пошаговое обновление шедулера на каждой итерации (если включён)
-            if scheduler is not None:
-                scheduler.step()
         if is_main_process():
             avg_epoch_loss = epoch_loss / len(dl)
             active_losses = " ".join(
