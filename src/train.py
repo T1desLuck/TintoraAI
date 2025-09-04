@@ -321,7 +321,9 @@ def main():
         loss_gan = None
 
     epochs = int(train_cfg.get("epochs", 2))
-    scaler = torch.cuda.amp.GradScaler(enabled=runtime.get("amp", True))
+    # AMP включаем только если есть CUDA и это разрешено в конфиге
+    amp_enabled = bool(runtime.get("amp", True)) and (device.type == "cuda")
+    scaler = torch.cuda.amp.GradScaler(enabled=amp_enabled)
     # PatchNCE для SSL-предобучения (Фаза -1)
     ssl_enabled = bool(ssl_cfg.get("enabled", False))
     pncet = float(ssl_cfg.get("patchnce", {}).get("temperature", 0.07))
@@ -540,7 +542,7 @@ def main():
         for i, (L, ab, *_) in enumerate(pbar):
             L = L.to(device)
             ab = ab.to(device)
-            with torch.cuda.amp.autocast(enabled=runtime.get("amp", True)):
+            with torch.cuda.amp.autocast(enabled=amp_enabled):
                 # OMM режим на эпоху
                 # Pass ground truth `ab` for OMM color statistics update
                 out = model(L, gt_ab=ab, omm_read_only=omm_epoch_read_only)
@@ -659,12 +661,12 @@ def main():
             if adv_active:
                 # Подготовка RGB, если ещё не было
                 if rgb_pred is None or rgb_gt is None:
-                    with torch.cuda.amp.autocast(enabled=runtime.get("amp", True)):
+                    with torch.cuda.amp.autocast(enabled=amp_enabled):
                         rgb_pred = lab_to_rgb_tensor(L, out["a"], out["b"])  # (B,3,H,W)
                         rgb_gt = lab_to_rgb_tensor(L, ab[:, :1], ab[:, 1:2])
                 D.train()
                 optD.zero_grad(set_to_none=True)
-                with torch.cuda.amp.autocast(enabled=runtime.get("amp", True)):
+                with torch.cuda.amp.autocast(enabled=amp_enabled):
                     # R1 regularization on real images if enabled
                     r1_gamma = float(gan_cfg.get("r1_gamma", 0.0))
                     do_r1 = r1_gamma > 0.0
@@ -698,7 +700,7 @@ def main():
                     # Сбрасываем requires_grad флаг для rgb_gt
                     rgb_gt = rgb_gt.detach()
                 # Генераторный терм
-                with torch.cuda.amp.autocast(enabled=runtime.get("amp", True)):
+                with torch.cuda.amp.autocast(enabled=amp_enabled):
                     pred_fake_forG = D(rgb_pred)
                     l_adv_term = loss_gan(pred_fake_forG, True, for_discriminator=False)
             # Сформировать базовые веса лоссов из конфигурации

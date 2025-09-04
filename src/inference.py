@@ -67,6 +67,22 @@ def colorize_single(
         f"DEBUG shapes after:  Lp={tuple(Lp.shape)} a={tuple(a.shape)} b={tuple(b.shape)}",
         flush=True,
     )
+    # Диагностические статистики по каналам a/b, чтобы понять, не стремятся ли они к нулю (серый)
+    a_mean = float(a.mean().item())
+    a_std = float(a.std().item())
+    a_min = float(a.min().item())
+    a_max = float(a.max().item())
+    b_mean = float(b.mean().item())
+    b_std = float(b.std().item())
+    b_min = float(b.min().item())
+    b_max = float(b.max().item())
+    print(
+        (
+            f"ab stats: a(mean={a_mean:.4f}, std={a_std:.4f}, min={a_min:.4f}, max={a_max:.4f}); "
+            f"b(mean={b_mean:.4f}, std={b_std:.4f}, min={b_min:.4f}, max={b_max:.4f})"
+        ),
+        flush=True,
+    )
     rgb = lab_to_rgb_tensor(Lp, a, b)  # (1,3,H,W)
     # удаляем паддинги
     _, _, H, W = L.shape
@@ -202,6 +218,11 @@ def main() -> None:
     parser.add_argument(
         "--cpu", action="store_true", help="Принудительный запуск на CPU."
     )
+    parser.add_argument(
+        "--omm-read-only",
+        action="store_true",
+        help="Отключить влияние OMM при инференсе (используется для A/B тестов).",
+    )
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -249,7 +270,33 @@ def main() -> None:
     ckpt_path = Path(args.checkpoint) if args.checkpoint is not None else default_ckpt
     if ckpt_path.exists():
         state = torch.load(ckpt_path, map_location=device)
-        model.load_state_dict(state.get("model", state), strict=False)
+        sd = state.get("model", state)
+        # Защитная логика: если размеры OMM из чекпойнта не совпадают с текущей конфигурацией,
+        # удаляем все ключи, относящиеся к OMM, чтобы избежать ошибок несовпадения размеров.
+        try:
+            mismatched_omm = False
+            # Проверяем несколько ключей OMM, если есть в sd и в модели
+            omm_keys_to_check = [
+                ("omm.prototypes", getattr(model.omm, "prototypes", None)),
+                ("omm.support", getattr(model.omm, "support", None)),
+                ("omm.prot_mu_ab", getattr(model.omm, "prot_mu_ab", None)),
+                ("omm.prot_sigma_ab", getattr(model.omm, "prot_sigma_ab", None)),
+            ]
+            for k, tensor_ref in omm_keys_to_check:
+                if k in sd and tensor_ref is not None:
+                    try:
+                        if sd[k].shape != tensor_ref.shape:
+                            mismatched_omm = True
+                            break
+                    except Exception:
+                        mismatched_omm = True
+                        break
+            if mismatched_omm:
+                sd = {k: v for k, v in sd.items() if not k.startswith("omm.")}
+        except Exception:
+            # В случае любой ошибки предосторожности просто продолжаем с исходным sd
+            pass
+        model.load_state_dict(sd, strict=False)
     else:
         print(f"Внимание: чекпойнт {ckpt_path} не найден. Использую случайные веса.")
 
@@ -304,12 +351,12 @@ def main() -> None:
                             L,
                             tile=int(args.tile),
                             overlap=int(args.overlap),
-                            omm_read_only=False,
+                            omm_read_only=bool(args.omm_read_only),
                             pad_divisor=pad_divisor,
                         )
                     else:
                         rgb = colorize_single(
-                            model, L, omm_read_only=False, pad_divisor=pad_divisor
+                            model, L, omm_read_only=bool(args.omm_read_only), pad_divisor=pad_divisor
                         )
 
             rgb_img = (
