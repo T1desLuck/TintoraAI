@@ -127,3 +127,12 @@ class OMMClusterLoss(nn.Module):
         cos = (f * m).sum(dim=1, keepdim=True)  # (B,1,h2,w2)
         loss = (1.0 - cos).mean()
         return loss
+
+
+# Совместимость: историческое имя ColorConsistencyLoss → пирамида согласованности
+class ColorConsistencyLoss(ColorConsistencyPyrLoss):
+    """
+    Совместимый алиас для ColorConsistencyPyrLoss.
+    Сохраняет прежнее имя класса, ожидаемое внешними модулями/скриптами.
+    """
+    pass

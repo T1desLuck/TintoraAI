@@ -6,6 +6,7 @@ from .advanced import (
     PhotometricSmoothnessLoss,
     DepthSmoothnessLoss,
     ColorConsistencyPyrLoss,
+    ColorConsistencyLoss,
     EntropyLoss,
     OMMClusterLoss,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "PhotometricSmoothnessLoss",
     "DepthSmoothnessLoss",
     "ColorConsistencyPyrLoss",
+    "ColorConsistencyLoss",
     "EntropyLoss",
     "OMMClusterLoss",
 ]
