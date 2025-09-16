@@ -27,6 +27,9 @@ _SCHEMA: Dict[str, Any] = {
     "ssl": Mapping,
     "omm": Mapping,
     "logging": Mapping,
+    # Новые секции для модульного слияния весов
+    "merging": Mapping,
+    "adapters": Mapping,
     # Модель: разрешаем произвольные ключи, но ниже отдельно проверим некоторые типы
     "model": {
         "c1": int,
