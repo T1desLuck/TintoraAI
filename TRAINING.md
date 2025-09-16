@@ -122,6 +122,7 @@ echo "Валидационных изображений: $(ls data/val | wc -l)"
 - `optimizer`: `lr_backbone`, `lr_decoder_heads`, `weight_decay_backbone`, `weight_decay_other`
 - `scheduler`: `type` (cosine), `warmup_steps`
 - `loss`: `lambda_l1`, `lambda_perc`, `lambda_photo`, `lambda_ds`, `lambda_cc`, `lambda_entropy`, `lambda_cluster`, `lambda_adv`
+  - Примечание по `lambda_photo`: в текущей реализации это вес лосса «PhotometricSmoothness» над каналами a/b (edge‑aware сглаживание с весами от градиентов яркости L), а не «фотометрической консистентности глубины». Реализовано в `src/losses/advanced.py::PhotometricSmoothnessLoss` и используется как `loss_photo(L, a_pred, b_pred)`.
 - `model`: `c1,c2,c3`, `film_dim`, `use_guidenet`, `use_saturation_head`, `omm`
 - `gan`: `enabled`, `input_nc`, `ndf`, `n_layers`, `loss_type`
 - `ssl`: `enabled`, `patchnce.*`

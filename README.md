@@ -140,7 +140,16 @@ torchrun --standalone --nproc_per_node=NUM_GPUS -m src.train --config configs/de
 </div>
 
 ## 🧠 Архитектура системы
-TintoraAI построен как гибрид Conv+Attention автокодер с модулем памяти:
+TintoraAI — гибридный Conv+Attention автокодер с модулем памяти (OMM), геометрическими головами и условным декодированием через FiLM.
+
+<div align="center">
+
+🟠 Вход L → 🟦 ConvNeXt‑Tiny (F1) → 🟩 CoAtNet‑light (F2) → 🟪 GAT (F3) → 🧠 OMM + 🧭 Depth/Illum + ⛰️ Normals → 🎛️ CRB (FiLM) → 🧵 U‑Net++ Decoder → 🎨 a/b (+sat) → 🌈 Lab→RGB
+
+</div>
+
+<details>
+<summary><b>Поток данных (схема)</b></summary>
 
 ```
 Вход L (1×H×W)
@@ -151,7 +160,7 @@ ConvNeXt‑Tiny  →  CoAtNet‑light  →  Geometry‑Aware Transformer
       │                    │                     │
       └──────────────┬─────┴─────────────┬───────┘
                      ▼                   ▼
-            Depth / Illum Heads      Region Pooling (grid, по умолчанию 7×7)
+            Depth / Illum Heads      Region Pooling (grid 7×7)
                      │                   │
                      ▼                   ▼
                  Нормали               OMM (банк прототипов: N×D)
@@ -166,8 +175,41 @@ ConvNeXt‑Tiny  →  CoAtNet‑light  →  Geometry‑Aware Transformer
                                 ▼
                           Lab→RGB (Выход)
 ```
+
+</details>
+
+### Размерности признаков
+
+| Уровень | Пространство | Каналы |
+|---------|--------------:|-------:|
+| F1 (ConvNeXt‑Tiny) | H/4 × W/4  | 96  |
+| F2 (CoAtNet‑light) | H/8 × W/8  | 192 |
+| F3 (GAT)           | H/16 × W/16| 384 |
+
+### Компоненты
+
+- __Backbone__
+  - `ConvNeXt‑Tiny` → `src/models/backbone/convnext_wrapper.py`
+  - `CoAtNet‑light` → `src/models/backbone/coatnet_wrapper.py`
+  - `GATLight` → `src/models/backbone/gat_light.py`
+
+- __Головы геометрии__
+  - `DepthHead`, `IlluminationHead` → `src/models/heads/heads.py`
+  - Нормали из глубины (Собель) → `TintoraAI.compute_normals()`
+
+- __OMM (Object Memory Module)__
+  - Региональный пулинг (по умолчанию 7×7), top‑k cosine softmax, EMA‑обновление прототипов и цветовой статистики → `src/models/omm/object_memory.py`
+
+- __CRB (Color Reasoning Block)__
+  - Слияние F3 + mem_map + D/I/Normals, проекция в контекст и генерация FiLM → `src/models/crb/crb.py`
+
+- __Декодер__
+  - U‑Net++ + FiLM на каждой стадии + PixelShuffle → `src/models/decoder/decoder_unetpp.py`
+
 > [!NOTE]
 > В текущей реализации выход ConvNeXt‑Tiny (`F1`, масштаб H/4) подаётся в CoAtNet‑light, после чего берётся карта признаков стадии `out_indices=2` (см. `CoAtNetLight`). Далее `GATLight` даунсэмплирует ×2. Это даёт фактические масштабы признаков: `F2 ≈ H/8`, `F3 ≈ H/16`. Для совместимости выполняется приведение каналов `256→192` через `coatnet_channel_fix` (см. `src/models/tintoraai.py`). Переключение на иные стадии CoAtNet упоминается как потенциальная опция, но в текущей версии не параметризовано и потребует изменения каналов и переобучения.
+>
+> Дополнение: явного узла FPN нет; уровни `F1/F2/F3` образуют пирамиду признаков и используются напрямую в `CRB` и декодере.
 
 ## 🛠️ Конфигурация
 Все настройки задаются в `configs/default.yaml`.

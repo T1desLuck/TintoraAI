@@ -327,10 +327,11 @@ pip install --upgrade --index-url https://download.pytorch.org/whl/cu121 torch t
 
 **Решение**:
 ```bash
-# Установите пакеты по одному
+# Установите пакеты по одному (при необходимости)
 pip install --no-cache-dir numpy
-pip install --no-cache-dir torch==1.10.0
-# ...и так далее
+
+# Для стека PyTorch используйте официальный индекс колёс под CUDA 12.1 (совместимо с requirements.txt)
+pip install --index-url https://download.pytorch.org/whl/cu121 torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1
 
 # Для проблем с компиляцией C-расширений на Windows
 pip install --upgrade pip setuptools wheel
