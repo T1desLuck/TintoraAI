@@ -4,6 +4,13 @@
 
 > Навигация: [README.md](README.md) • [TRAINING.md](TRAINING.md) • [TEST.md](TEST.md) • [CONFIGURATION.md](CONFIGURATION.md)
 
+## 🔗 Быстрые ссылки
+
+- Репозиторий: [`README.md`](README.md)
+- Обучение: [`TRAINING.md`](TRAINING.md)
+- Конфигурация: [`CONFIGURATION.md`](CONFIGURATION.md)
+- Тестирование: [`TEST.md`](TEST.md)
+
 ## 📋 Содержание
 
 - [Системные требования](#системные-требования)
@@ -41,6 +48,9 @@
 > После установки вы можете настроить проект через YAML-конфиг. Краткий справочник опций — в [CONFIGURATION.md](CONFIGURATION.md). Практические шаги обучения — в [TRAINING.md](TRAINING.md).
 
 ## ⚡ Быстрый старт (локально)
+
+> [!TIP]
+> TL;DR: Клонируйте репозиторий, создайте `venv`, установите зависимости и запустите инференс на папке `data/`.
 
 1. Клонируйте и перейдите в каталог:
 ```bash
@@ -364,7 +374,7 @@ python -m src.inference --help
 
 3. Запуск тестов:
 ```bash
-pytest tests/
+python -m pytest -q
 ```
 
 4. Проверка инференса на своём изображении:

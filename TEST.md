@@ -26,6 +26,40 @@
 - [Подсказки и устранение неполадок](#подсказки-и-устранение-неполадок)
 - [CI и локальные проверки](#ci-и-локальные-проверки)
 
+## Тесты Adapter/LoRA (новые)
+
+Ниже — рекомендации по проверкам новых модулей Adapter и LoRA.
+
+1. Без дополнительных весов (идентичность базовой модели):
+   ```bash
+   python test_project.py run inference
+   ```
+   Ожидаем, что все тесты инференса проходят без появления сторонних весов в `checkpoints/adapters` и `checkpoints/lora`.
+
+2. Синтетические мини‑веса (корректное применение):
+   - Создайте небольшой Adapter или LoRA с несколькими параметрами (можно обучить 1–2 эпохи на паре изображений).
+   - Поместите файлы в `checkpoints/adapters/` и/или `checkpoints/lora/`.
+   - Проверьте инференс:
+     ```bash
+     python test_project.py run inference
+     ```
+   - Ожидаем отсутствие ошибок и небольшое, но детерминированное изменение выходов.
+
+3. Несколько LoRA (взвешенное слияние):
+   - Поместите 2–3 LoRA в `checkpoints/lora/` с разными именами.
+   - Настройте веса в `configs/default.yaml` → `merging.weights.lora.{default|name}`.
+   - Запустите инференс‑тесты:
+     ```bash
+     python test_project.py run inference
+     ```
+   - Ожидаем, что паспортизированные тесты проходят, а слияние не вызывает артефактов.
+
+Точечные прогоны:
+```bash
+python test_project.py run tests/test_inference.py::test_colorize_tiled
+python test_project.py run tests/test_forward.py::test_forward_shapes
+```
+
 ## Требования
 - Python 3.9+
 - Установленный `pytest`

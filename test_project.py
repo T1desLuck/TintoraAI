@@ -49,6 +49,11 @@ TARGETS: Dict[str, List[str]] = {
     "inference": ["tests/test_inference.py"],
     "losses": ["tests/test_losses.py"],
     "modules": ["tests/test_modules.py"],
+    # Новый алиас для быстрых интеграционных тестов Adapter/LoRA
+    "adapters_lora_fast": [
+        "tests/test_train_adapter_fast.py",
+        "tests/test_train_lora_fast.py",
+    ],
 }
 
 
@@ -67,6 +72,7 @@ def show_help() -> None:
             "inference": "Функции инференса: одиночный и тайловый режим (tests/test_inference.py).",
             "losses": "Продвинутые функции потерь (tests/test_losses.py).",
             "modules": "Отдельные модули: backbone/heads/CRB/decoder (tests/test_modules.py).",
+            "adapters_lora_fast": "Быстрые интеграционные тесты Adapter/LoRA (микро‑обучение/экспорт)",
         },
         "tips": [
             "Можно запускать точечные тесты: modules::test_crb (любой test_* внутри файла).",
@@ -81,7 +87,7 @@ def show_help() -> None:
         lines.append(f"  {cmd:<26} — {desc}")
     lines.append("")
     lines.append("Цели (алиасы):")
-    for tgt in ["all", "dlb", "forward", "inference", "losses", "modules"]:
+    for tgt in ["all", "dlb", "forward", "inference", "losses", "modules", "adapters_lora_fast"]:
         desc = DESCRIPTIONS["targets"].get(tgt, "")
         lines.append(f"  {tgt:<26} — {desc}")
     lines.append("")
@@ -121,6 +127,7 @@ def list_targets() -> None:
         "inference": "Инференс: одиночный и тайловый режим, диапазоны значений.",
         "losses": "Advanced лоссы: корректность вычислений и финитность значений.",
         "modules": "Backbones/Heads/CRB/Decoder: формы и функциональность.",
+        "adapters_lora_fast": "Быстрые тесты Adapter/LoRA (микро‑обучение/экспорт)",
     }
     print("Доступные цели для запуска:")
     for alias in sorted(TARGETS.keys()):

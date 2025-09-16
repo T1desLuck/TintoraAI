@@ -6,6 +6,31 @@
   <p>Умная колоризация • Гибкая настройка</p>
 </div>
 
+<!-- 🔗 Table of Contents -->
+## 📚 Содержание
+
+- [✨ Особенности](#-особенности)
+- [🚀 Быстрый старт](#-быстрый-старт)
+- [📖 Документация](#-документация)
+- [🧠 Архитектура системы](#-архитектура-системы)
+- [Поток весов при инференсе (base/adapter/LoRA)](#поток-весов-при-инференсе-baseadapterlora)
+- [🛠️ Конфигурация](#️-конфигурация)
+- [Adapter / LoRA (новые возможности)](#adapter--lora-новые-возможности)
+- [🖼️ Примеры результатов](#️-примеры-результатов)
+- [🔧 Требования](#-требования)
+- [⚙️ Как внести вклад](#️-как-внести-вклад)
+- [🧪 Тесты](#-тесты)
+- [📄 Лицензия](#-лицензия)
+- [📜 Цитирование](#-цитирование)
+- [📞 Контакты](#-контакты)
+
+## 🔗 Быстрые ссылки
+
+- Установка: [`INSTALL.md`](INSTALL.md)
+- Обучение: [`TRAINING.md`](TRAINING.md)
+- Конфигурация: [`CONFIGURATION.md`](CONFIGURATION.md)
+- Тестирование: [`TEST.md`](TEST.md)
+
 <div align="center">
 
 [![Python Version](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
@@ -211,11 +236,72 @@ ConvNeXt‑Tiny  →  CoAtNet‑light  →  Geometry‑Aware Transformer
 >
 > Дополнение: явного узла FPN нет; уровни `F1/F2/F3` образуют пирамиду признаков и используются напрямую в `CRB` и декодере.
 
+### Поток весов при инференсе (base/adapter/LoRA)
+- Базовые веса (base) загружаются первыми и определяют поведение модели.
+- Если присутствует `checkpoints/adapters/adapter.pth`, применяется аддитивная поправка (Adapter) к целевым слоям (decoder/CRB) с весом `merging.weights.adapter`.
+- Затем последовательно применяются LoRA‑поправки из `checkpoints/lora/*.pth` (несколько файлов допускаются) с весами из `merging.weights.lora.{default|per‑name}`.
+- При отсутствии Adapter/LoRA модель работает как прежде, без каких‑либо изменений.
+
 ## 🛠️ Конфигурация
 Все настройки задаются в `configs/default.yaml`.
 
 - Краткий обзор параметров и новых опций см. в `CONFIGURATION.md`.
 - Подробные рекомендации по обучению и препроцессингу см. в `TRAINING.md` (раздел «Настройка конфигурации»).
+
+### Adapter / LoRA (новые возможности)
+
+Назначение весов:
+- **Базовые веса (base)** — главный «стержень» качества. Это стабильная, полноценно обученная модель (`checkpoints/latest.pth`). Они доминируют при слиянии и отвечают за общий реализм, цветовую согласованность и универсальность.
+- **Adapter** — мягкая корректировка сложных сцен и глобальных решений цвета. Реализован как аддитивные дельты к выбранным слоям (decoder/CRB). Обучается отдельно на ваших данных/подвыборках, но не меняет base. В слиянии добавляется «сверху» на base с весом `merging.weights.adapter`.
+- **LoRA** — тематические «микро‑настройки» (лица, животные, транспорт и т. п.) низкого ранга для конкретных признаков. Можно иметь несколько LoRA одновременно. На инференсе каждое LoRA добавляется поверх (после Adapter) с весами `merging.weights.lora.{default|per‑name}`. Это повышает детализацию нужной тематики, не «перекрашивая» всё изображение.
+
+Как это работает на инференсе:
+1. Загружаются базовые веса модели (base).
+2. Если найден `checkpoints/adapters/adapter.pth`, применяется взвешенная аддитивная дельта (Adapter).
+3. Если найдены `checkpoints/lora/*.pth`, последовательно добавляются их низкоранговые поправки (LoRA), каждая со своим весом.
+4. При отсутствии файлов Adapter/LoRA никакого слияния не происходит — модель работает как прежде.
+
+- Adapter и LoRA — модульные дополнения без изменений базовой модели. Тренируются отдельно, но с использованием той же логики/конфига.
+- Инференс автоматически подхватывает `checkpoints/adapters/*.pth` и `checkpoints/lora/*.pth` и выполняет взвешенное слияние: base → adapter → loRA. Если файлов нет — поведение 1‑в‑1 как раньше.
+- Весовые коэффициенты слияния настраиваются в `merging.weights` (см. `CONFIGURATION.md`).
+
+Быстрый старт:
+```bash
+# Обучение Adapter
+python -m src.train_adapter --config configs/default.yaml
+
+# Обучение LoRA (имя берётся из adapters.lora_name)
+python -m src.train_lora --config configs/default.yaml
+
+# Инференс: автоматически подмержит adapter/LoRA, если они есть
+python -m src.inference --input data/test --config configs/default.yaml --output outputs
+```
+Подробнее: разделы «Adapter/LoRA» в `TRAINING.md` и «Новые опции» в `CONFIGURATION.md`.
+
+### FAQ: Adapter/LoRA на инференсе — кратко
+
+- **Где хранить веса?**
+  - Adapter: `checkpoints/adapters/adapter.pth`
+  - LoRA: `checkpoints/lora/*.pth` (например, `lora_face_2025-09-16.pth`)
+
+- **Подхватываются автоматически?** Да. При загрузке базовых весов (`load_state_dict`) срабатывает хук из `sitecustomize.py`, который вызывает `src/models/merge_all.scan_and_merge()`.
+
+- **Если файлов нет?** Ничего не меняется: работает чистая base‑модель.
+
+- **Порядок слияния и вклад:** `base → adapter → lora`.
+  - Вес Adapter: `merging.weights.adapter` (по умолчанию `0.8`).
+  - Вес(а) LoRA: `merging.weights.lora.default` или по именам `merging.weights.lora.<name>`.
+  - Имя `<name>` определяется из файла: `lora_<name>_*.pth` → `<name>`, иначе берётся целиком `stem` файла.
+
+- **Как временно отключить?**
+  - Переместить/переименовать файлы из соответствующих папок, либо
+  - Поставить вес в конфиге `0.0` (например, `merging.weights.adapter: 0.0` или `merging.weights.lora.face: 0.0`).
+
+- **Что если нет base‑чекпоинта?** Если `--checkpoint` и `paths.checkpoints/latest.pth` отсутствуют, `inference.py` работает со случайными весами и пропускает `load_state_dict`, поэтому автослияние не сработает. Рекомендуется всегда иметь базовый чекпоинт.
+
+- **Что даёт Adapter/LoRA?**
+  - Adapter — "глобальная коррекция" сложных сцен и цветовых решений без изменения base.
+  - LoRA — тематические точечные нюансы (например, лица): усиливает детальность нужного домена, можно подключать несколько.
 
 ## 🔧 Требования
 - Python 3.9+
@@ -275,12 +361,15 @@ TintoraAI/
 ├─ requirements.txt               # Зависимости проекта
 ├─ main.py                        # Точка входа (при необходимости)
 ├─ test_project.py                # Русскоязычный лаунчер тестов
+├─ sitecustomize.py               # Авто‑хук Python: автослияние Adapter/LoRA при инференсе (без правок core)
 ├─ configs/                       # Конфигурации (YAML)
 │  └─ default.yaml                # Базовая конфигурация (пути, обучение, лоссы, модель)
 ├─ src/                           # Исходный код библиотеки TintoraAI
 │  ├─ __init__.py                 # Инициализация пакета src
 │  ├─ train.py                    # Скрипт обучения: python -m src.train --config ...
 │  ├─ inference.py                # Скрипт инференса: python -m src.inference --input ...
+│  ├─ train_adapter.py            # Обучение Adapter (дельты поверх decoder/CRB), сохраняет checkpoints/adapters/adapter.pth
+│  ├─ train_lora.py               # Обучение LoRA (low‑rank A,B) поверх decoder/CRB, сохраняет checkpoints/lora/*.pth
 │  ├─ datasets/                   # Датасеты и аугментации
 │  │  ├─ __init__.py
 │  │  ├─ simple_dataset.py        # Простой датасет (пример)
@@ -295,9 +384,12 @@ TintoraAI/
 │  │  └─ patchnce.py              # Настройки/заготовка для SSL PatchNCE
 │  ├─ models/                     # Архитектура модели
 │  │  ├─ __init__.py              # Инициализация пакета моделей
+│  │  ├─ adapter.py               # Container/merge утилиты для Adapter (аддитивные дельты)
 │  │  ├─ discriminator.py         # PatchGAN дискриминатор (фаза 4)
 │  │  ├─ guidenet.py              # Доп. сеть-подсказчик (опционально)
+│  │  ├─ lora.py                  # Container/merge утилиты для LoRA (низкоранговые факторы)
 │  │  ├─ tintoraai.py             # Основной класс модели TintoraAI
+│  │  ├─ merge_all.py             # Автоскан checkpoints и взвешенное слияние base→adapter→lora
 │  │  ├─ backbone/                # Бэкбоны (ConvNeXt/CoAtNet/GAT)
 │  │  │  ├─ __init__.py
 │  │  │  ├─ convnext_tiny.py      # Реализация ConvNeXt‑Tiny (ранний этап энкодера)
@@ -343,7 +435,9 @@ TintoraAI/
 │  ├─ test_train_micro.py         # Микро‑интеграция тренинга (неск. шагов)
 │  ├─ test_checkpoint_io.py       # Checkpoint I/O: latest/best имена, roundtrip, resume parity
 │  ├─ test_perf_smoke.py          # Лёгкий перф/VRAM smoke‑тест (CUDA, skip на CPU)
-│  └─ test_ddp_windows.py         # DDP (CPU) spawn + Windows path separators
+│  ├─ test_ddp_windows.py         # DDP (CPU) spawn + Windows path separators
+│  ├─ test_train_adapter_fast.py  # Быстрый интеграционный тест Adapter (микро‑обучение/экспорт)
+│  └─ test_train_lora_fast.py     # Быстрый интеграционный тест LoRA (микро‑обучение/экспорт)
 ├─ scripts/                       # Утилиты/скрипты
 │  ├─ preview_preprocessing.py    # Предпросмотр подготовки изображения (Lab, L‑канал, дефекты)
 │  ├─ smoke_all.py                # Быстрый sequential‑smoke набора тестов/примеров
@@ -361,6 +455,8 @@ TintoraAI/
 │  ├─ val/                        # Валидационные изображения
 │  └─ test/                       # Тестовые изображения (опционально)
 ├─ checkpoints/                   # [Папка-плейсхолдер] Чекпоинты моделей (*.pth)
+│  ├─ adapters/                   # Веса Adapter (adapter.pth)
+│  └─ lora/                       # Веса LoRA (lora_<name>_<YYYY-MM-DD>.pth)
 ├─ logs/                          # [Папка-плейсхолдер] Логи (TensorBoard, тексты)
 └─ experiments/                   # [Папка-плейсхолдер] Эксперименты/визуализации
    └─ exp_default/                # Каталог эксперимента по умолчанию
@@ -379,46 +475,29 @@ TintoraAI/
 
 ## 🧪 Тесты
 
-Рекомендуемый способ — удобный лаунчер в корне проекта `test_project.py`:
+Коротко о запуске тестов. Полная документация перенесена в `TEST.md`.
 
-```powershell
-# Справка и список целей
-python test_project.py help
-python test_project.py list
+- Запуск через лаунчер:
+  ```powershell
+  python test_project.py help
+  python test_project.py list
+  python test_project.py run all
+  ```
 
-# Запуск полного набора
-python test_project.py run all
+- Точечные примеры:
+  ```powershell
+  python test_project.py run modules
+  python test_project.py run modules::test_crb
+  python test_project.py run inference
+  ```
 
-# Примеры точечных запусков
-python test_project.py run modules
-python test_project.py run modules::test_crb
-python test_project.py run inference
-```
+- Альтернатива (pytest напрямую):
+  ```powershell
+  python -m pip install pytest
+  python -m pytest -q
+  ```
 
-Лаунчер печатает понятные сообщения на русском об успешном прохождении или причинах ошибок. Его также удобно вызывать из Jupyter/Colab:
-
-```python
-from test_project import run, show_help, list_targets
-show_help(); list_targets(); run("modules")
-```
-
-Альтернатива: запуск напрямую через pytest
-
-```powershell
-pip install pytest
-pytest -q                    # все тесты
-pytest tests/test_inference.py -q
-pytest -q -k "forward"
-```
-
-Что покрывают тесты:
-- Проверка прямого прохода модели (`tests/test_forward.py`).
-- Инференс одиночный и тайловый (`tests/test_inference.py`).
-- Базовые лоссы и дополнительные компоненты (`tests/test_losses.py`).
-- Модули бэкбонов/голов/декодера и утилиты (`tests/test_modules.py`).
-- Балансировщик потерь DLB (`tests/test_dlb.py`).
-
-Ожидаемый результат: краткий отчёт об успехе/падениях (через `test_project.py`) или отчёт pytest. Подробности и сценарии см. в `TEST.md`.
+Смотрите подробные цели запуска, список файлов и подсказки в `TEST.md`.
 
 ## 📄 Лицензия
 Этот проект распространяется под лицензией MIT. См. файл LICENSE для более подробной информации.

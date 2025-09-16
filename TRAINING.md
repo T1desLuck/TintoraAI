@@ -4,6 +4,13 @@
 
 > Навигация: [README.md](README.md) • [INSTALL.md](INSTALL.md) • [TEST.md](TEST.md) • [CONFIGURATION.md](CONFIGURATION.md)
 
+## 🔗 Быстрые ссылки
+
+- Обзор проекта: [`README.md`](README.md)
+- Установка: [`INSTALL.md`](INSTALL.md)
+- Конфигурация: [`CONFIGURATION.md`](CONFIGURATION.md)
+- Тестирование: [`TEST.md`](TEST.md)
+
 ## 📋 Содержание
 
 - [Обзор процесса обучения](#обзор-процесса-обучения)
@@ -162,6 +169,17 @@ python test_project.py preview --input assets/color.jpg --save_L --enable_defect
 
 ## 🚀 Запуск обучения
 
+> [!TIP]
+> TL;DR: Активируйте окружение → убедитесь в корректной конфигурации → запустите обучение. Пример:
+> ```bash
+> # Linux/macOS
+> source venv/bin/activate
+> python -m src.train --config configs/default.yaml
+> # Windows (PowerShell)
+> venv\Scripts\Activate.ps1
+> python -m src.train --config configs/default.yaml
+> ```
+
 ### Базовое обучение
 После подготовки данных и настройки конфигурации, запустите обучение:
 ```bash
@@ -188,6 +206,36 @@ torchrun --standalone --nproc_per_node=2 -m src.train --config configs/default.y
 # (загрузка latest.pth из секции paths.checkpoints автоматически при наличии)
 python -m src.train --config configs/default.yaml
 ```
+
+### Обучение Adapter / LoRA (новые возможности)
+Adapter и LoRA обучаются отдельными скриптами, но используют те же конфиги/датасеты/лоссы/куррикулум, что и основная модель. Базовые веса не изменяются — оптимизируются только параметры Adapter/LoRA.
+
+- Общие свойства:
+  - Читаются `training.*`, `loss.*`, `scheduler.*`, `gan.*` из `configs/default.yaml`.
+  - Фазы (curriculum): включение лоссов соответствует основному сценарию (Phase ≥1: photometric/depth smooth; Phase ≥2: perceptual; Phase ≥3: OMM read + color consistency; Phase 4: опционально GAN).
+  - AMP (`runtime.amp`) и cosine‑scheduler с `scheduler.warmup_steps`.
+  - Логи TensorBoard пишутся в `paths.logs`.
+
+Команды:
+```bash
+# Adapter: обучает аддитивные дельты поверх целевых весов (decoder/CRB)
+python -m src.train_adapter --config configs/default.yaml
+
+# LoRA: обучает low‑rank A,B факторы для целевых весов (decoder/CRB)
+# Имя файла определяется adapters.lora_name (например, faces)
+python -m src.train_lora --config configs/default.yaml
+```
+
+Результаты:
+- Adapter: `checkpoints/adapters/adapter.pth`
+- LoRA: `checkpoints/lora/lora_<lora_name>_<YYYY-MM-DD>.pth`
+
+Инференс:
+```bash
+python -m src.inference --input data/test --config configs/default.yaml --output outputs
+```
+> [!NOTE]
+> Инференс автоматически подхватывает `adapters/*.pth` и `lora/*.pth`, выполняя взвешенное слияние: base → adapter → loRA (весовые коэффициенты в `merging.weights`). При отсутствии файлов поведение идентично базовой модели. Подробности — см. раздел FAQ в `README.md`.
 
 ### Запуск обучения на Google Colab
 ```python
