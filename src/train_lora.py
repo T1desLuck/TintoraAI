@@ -257,17 +257,17 @@ def main():
     use_curr = bool(cur.get("enabled", False))
     cur_phases = cur.get("phases", []) if isinstance(cur.get("phases", []), list) else []
     def resolve_phase(epoch: int) -> int:
+        """Use YAML segments with 'from'/'to' like base train.py, fallback to simple schedule."""
         if use_curr and cur_phases:
-            for item in cur_phases:
-                try:
-                    if epoch <= int(item.get("until", 0)):
-                        return int(item.get("phase", 0))
-                except Exception:
-                    continue
             try:
-                return int(cur_phases[-1].get("phase", 4))
+                for seg in cur_phases:
+                    f = int(seg.get("from", 1))
+                    t = int(seg.get("to", f))
+                    if f <= epoch <= t:
+                        return int(seg.get("phase", 0))
+                return int(cur_phases[-1].get("phase", 0))
             except Exception:
-                return 4
+                pass
         if epoch < 1:
             return -1
         if epoch < 2:
@@ -280,10 +280,26 @@ def main():
             return 3
         return 4
 
+    def resolve_omm_read_only(epoch: int, phase: int) -> bool:
+        """Return omm_read_only from YAML if provided for segment; else phase < 3."""
+        if use_curr and cur_phases:
+            try:
+                for seg in cur_phases:
+                    f = int(seg.get("from", 1))
+                    t = int(seg.get("to", f))
+                    if f <= epoch <= t:
+                        if seg.get("omm_read_only", None) is not None:
+                            return bool(seg.get("omm_read_only"))
+                        break
+            except Exception:
+                pass
+        return bool(phase < 3)
+
     epochs = int(cfg.get("training", {}).get("epochs", 2))
     global_step = 0
     for epoch in range(1, epochs + 1):
         phase = resolve_phase(epoch)
+        omm_ro = resolve_omm_read_only(epoch, phase)
 
         running = 0.0
         batch_bar = tqdm(
@@ -298,7 +314,7 @@ def main():
             ab_gt = ab_gt.to(device)
             opt.zero_grad(set_to_none=True)
             with torch.cuda.amp.autocast(enabled=scaler.is_enabled()):
-                out = model(L, gt_ab=ab_gt, omm_read_only=phase < 3)
+                out = model(L, gt_ab=ab_gt, omm_read_only=omm_ro)
                 total = 0.0 * (out["a"].sum() * 0)
                 if lam_l1 > 0:
                     total = total + lam_l1 * l1(out["a"], out["b"], ab_gt)
