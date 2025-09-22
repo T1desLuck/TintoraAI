@@ -245,6 +245,8 @@ def main():
     # TensorBoard logging
     logs_dir = Path(cfg.get("paths", {}).get("logs", "logs"))
     writer = SummaryWriter(log_dir=str(logs_dir))
+    # Период логирования изображений (из YAML: logging.log_images_every)
+    log_img_every = int(cfg.get("logging", {}).get("log_images_every", 50))
 
     # Curriculum: try to read from config; fallback to simple phase gates
     cur = cfg.get("training", {}).get("curriculum", {})
@@ -368,8 +370,30 @@ def main():
 
             # Logging
             if global_step % 50 == 0:
+                # Скаляры: фаза, LR и текущий loss
                 writer.add_scalar("train/phase", phase, global_step)
                 writer.add_scalar("train/lr", opt.param_groups[0]["lr"], global_step)
+                try:
+                    writer.add_scalar("train/loss", float(total.detach().item()), global_step)
+                except Exception:
+                    pass
+
+            # Изображения: вход L, предсказанный RGB, GT RGB
+            if log_img_every > 0 and (global_step % log_img_every == 0):
+                try:
+                    with torch.no_grad():
+                        # Нормализуем L из [-1,1] в [0,1] для визуализации
+                        L_vis = ((L[:1] + 1.0) * 0.5).clamp(0, 1)  # (1,1,H,W)
+                        pred_lab = torch.cat([L[:1], out["a"][:1], out["b"][:1]], dim=1)
+                        gt_lab = torch.cat([L[:1], ab_gt[:1, :1], ab_gt[:1, 1:2]], dim=1)
+                        rgb_pred = lab_to_rgb_tensor(pred_lab).clamp(0, 1)  # (1,3,H,W)
+                        rgb_gt = lab_to_rgb_tensor(gt_lab).clamp(0, 1)
+                    # add_image ожидает (C,H,W)
+                    writer.add_image("images/L", L_vis.squeeze(0).detach().cpu(), global_step)
+                    writer.add_image("images/RGB_pred", rgb_pred.squeeze(0).detach().cpu(), global_step)
+                    writer.add_image("images/RGB_gt", rgb_gt.squeeze(0).detach().cpu(), global_step)
+                except Exception:
+                    pass
             global_step += 1
 
     # Save adapter checkpoint
