@@ -341,9 +341,8 @@ def main():
             # GAN (Phase 4): generator loss
             if use_gan and phase >= 4 and D is not None and gan_loss is not None:
                 try:
-                    # Prepare fake/real RGB
-                    pred_lab = torch.cat([L, out["a"], out["b"]], dim=1)
-                    rgb_fake = lab_to_rgb_tensor(pred_lab).clamp(0, 1)
+                    # Prepare fake RGB from separate L,a,b
+                    rgb_fake = lab_to_rgb_tensor(L, out["a"], out["b"]).clamp(0, 1)
                     # Generator wants D(fake) to be real
                     d_pred = D(rgb_fake)
                     g_adv = float(losses_cfg.get("lambda_adv", 0.0)) * gan_loss(d_pred, True)
@@ -374,10 +373,8 @@ def main():
                 try:
                     d_opt.zero_grad(set_to_none=True)  # type: ignore
                     with torch.cuda.amp.autocast(enabled=scaler.is_enabled()):
-                        pred_lab = torch.cat([L, out["a"], out["b"]], dim=1)
-                        rgb_fake = lab_to_rgb_tensor(pred_lab).clamp(0, 1).detach()
-                        gt_lab = torch.cat([L, ab_gt[:, :1], ab_gt[:, 1:2]], dim=1)
-                        rgb_real = lab_to_rgb_tensor(gt_lab).clamp(0, 1)
+                        rgb_fake = lab_to_rgb_tensor(L, out["a"], out["b"]).clamp(0, 1).detach()
+                        rgb_real = lab_to_rgb_tensor(L, ab_gt[:, :1], ab_gt[:, 1:2]).clamp(0, 1)
                         d_fake = D(rgb_fake)
                         d_real = D(rgb_real)
                         d_loss = 0.5 * (gan_loss(d_real, True) + gan_loss(d_fake, False))
@@ -403,16 +400,17 @@ def main():
                     with torch.no_grad():
                         # Нормализуем L из [-1,1] в [0,1] для визуализации
                         L_vis = ((L[:1] + 1.0) * 0.5).clamp(0, 1)  # (1,1,H,W)
-                        pred_lab = torch.cat([L[:1], out["a"][:1], out["b"][:1]], dim=1)
-                        gt_lab = torch.cat([L[:1], ab_gt[:1, :1], ab_gt[:1, 1:2]], dim=1)
-                        rgb_pred = lab_to_rgb_tensor(pred_lab).clamp(0, 1)  # (1,3,H,W)
-                        rgb_gt = lab_to_rgb_tensor(gt_lab).clamp(0, 1)
+                        rgb_pred = lab_to_rgb_tensor(L[:1], out["a"][:1], out["b"][:1]).clamp(0, 1)  # (1,3,H,W)
+                        rgb_gt = lab_to_rgb_tensor(L[:1], ab_gt[:1, :1], ab_gt[:1, 1:2]).clamp(0, 1)
                     # add_image ожидает (C,H,W)
                     writer.add_image("images/L", L_vis.squeeze(0).detach().cpu(), global_step)
                     writer.add_image("images/RGB_pred", rgb_pred.squeeze(0).detach().cpu(), global_step)
                     writer.add_image("images/RGB_gt", rgb_gt.squeeze(0).detach().cpu(), global_step)
-                except Exception:
-                    pass
+                except Exception as e:
+                    try:
+                        print(f"[WARN][images] skip TB images: {e}")
+                    except Exception:
+                        pass
             global_step += 1
 
     # Save adapter checkpoint
