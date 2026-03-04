@@ -1,5 +1,3 @@
----
-
 <h2 align="center">🛡️ Armaga - Антивирус & Защита</h2>
 
 <p align="center">
