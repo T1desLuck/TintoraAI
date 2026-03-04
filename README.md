@@ -1,19 +1,15 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/AI-Ecosystem-red?style=for-the-badge" />
-</p>
-
-<h2 align="center">🛡️ Armaga — Антивирус & Защита</h2>
-
-<p align="center">
-  AI-антивирус для Android<br>
-  ML-анализ угроз • Поведенческое сканирование • Защита в реальном времени
-</p>
-
-<p align="center">
-  <a href="https://play.google.com/store/apps/details?id=com.aiiql.armaga" target="_blank">
-    <img src="https://img.shields.io/badge/Скачать_в-Google_Play-E10600?style=for-the-badge&logo=google-play&logoColor=white" />
-  </a>
-</p>
+> ## 🛡️ Armaga — Антивирус & Защита  
+> Этот репозиторий посвящён нейросетям и компьютерному зрению.  
+> Если вам интересны практические AI-решения — посмотрите мой Android-антивирус.  
+>  
+> **AI-антивирус для Android**  
+> ML-анализ угроз • Поведенческое сканирование • Защита в реальном времени  
+>  
+> <p align="center">
+>   <a href="https://play.google.com/store/apps/details?id=com.aiiql.armaga" target="_blank">
+>     <img src="https://img.shields.io/badge/Скачать_в-Google_Play-E10600?style=for-the-badge&logo=google-play&logoColor=white" />
+>   </a>
+> </p>
 
 # TintoraAI: Продвинутая система колоризации изображений
 
