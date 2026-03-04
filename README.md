@@ -1,25 +1,21 @@
-<div align="center" style="border:1px solid #e10600; border-radius:16px; padding:24px; margin:24px 0;">
+<h2 align="center">🛡️ Armaga - Антивирус & Защита</h2>
 
-<h2>🛡️ Armaga — Антивирус & Защита</h2>
-
-<p>
+<p align="center">
   Этот репозиторий посвящён нейросетям и компьютерному зрению.<br>
   Если вам интересны практические AI-решения — посмотрите мой Android-антивирус.
 </p>
 
-<p>
+<p align="center">
   <b>AI-антивирус для Android</b><br>
   ML-анализ угроз • Поведенческое сканирование • Защита в реальном времени
 </p>
 
-<p>
+<p align="center">
   <a href="https://play.google.com/store/apps/details?id=com.aiiql.armaga" target="_blank">
-    <img src="https://img.shields.io/badge/Скачать_в-Google_Play-E10600?style=for-the-badge&logo=google-play&logoColor=white" />
+    <img src="https://img.shields.io/badge/Скачать_в-Google_Play-E10600?style=for-the-badge&logo=google-play&logoColor=green" />
   </a>
 </p>
-
-</div>
-
+---
 # TintoraAI: Продвинутая система колоризации изображений
 
 <div align="center">
