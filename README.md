@@ -1,6 +1,6 @@
 ---
 
-<h2 align="center">🧠 AI Projects Ecosystem</h2>
+<h2 align="center">🛡️ Armaga: Антивирус & Защита</h2>
 
 <p align="center">
   Этот репозиторий посвящён нейросетям и компьютерному зрению.<br>
