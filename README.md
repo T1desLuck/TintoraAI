@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://play.google.com/store/apps/details?id=com.aiiql.armaga" target="_blank">
-    <img src="https://img.shields.io/badge/Скачать_в-Google_Play-34A853?style=for-the-badge&logo=google-play&logoColor=white" />
+    <img src="https://img.shields.io/badge/Скачать_в-Google_Play-34A853?style=for-the-badge&logo=google-play&logoColor=red" />
   </a>
 </p>
 
