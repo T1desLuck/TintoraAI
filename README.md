@@ -15,7 +15,9 @@
     <img src="https://img.shields.io/badge/Скачать_в-Google_Play-E10600?style=for-the-badge&logo=google-play&logoColor=green" />
   </a>
 </p>
+
 ---
+
 # TintoraAI: Продвинутая система колоризации изображений
 
 <div align="center">
