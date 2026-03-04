@@ -1,5 +1,20 @@
 # TintoraAI: Продвинутая система колоризации изображений
+---
 
+<h2 align="center">🛡 Protect Your Android Device</h2>
+
+<p align="center">
+  <b>Advanced AI-powered Antivirus for Android</b><br>
+  Real-time protection • Smart ML scanning • Clean & fast interface
+</p>
+
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.aiiql.armaga" target="_blank">
+    <img src="https://img.shields.io/badge/Download_on-Google_Play-34A853?style=for-the-badge&logo=google-play&logoColor=white" />
+  </a>
+</p>
+
+---
 <div align="center">
   <img src="assets/tintorai_logo.png" alt="TintoraAI Logo" width="512"/>
   <h3>Превращайте черно-белые изображения в яркие цветные с помощью ИИ</h3>
